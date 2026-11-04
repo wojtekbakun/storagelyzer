@@ -29,9 +29,12 @@ interface MNode {
   id: number;
   name: string;
   kind: Kind;
+  /** A file's size; for a snapshot folder, the bytes of children too small to keep. */
   own: number;
-  /** Logical size of a file, when it is not ~ its size on disk. */
+  /** Logical size of a file, when it is not ~ its size on disk (snapshot folders: of the left-out children). */
   logical?: number;
+  /** Snapshot folders: how many items were left out. */
+  hidden?: number;
   flags: number;
   mtime: number;
   parent: MNode | null;
@@ -256,7 +259,7 @@ class MockTree {
     this.build(this.root, specs);
   }
 
-  private add(name: string, kind: Kind, own: number, flags: number, parent: MNode | null): MNode {
+  add(name: string, kind: Kind, own: number, flags: number, parent: MNode | null): MNode {
     const n: MNode = {
       id: this.nodes.length,
       name,
@@ -303,9 +306,10 @@ class MockTree {
     const walk = (n: MNode): void => {
       n.visible = n.id <= this.revealed && !n.removed;
       const cloud = n.kind === "file" && (n.flags & Flag.CLOUD) !== 0;
-      n.size = n.kind === "dir" || cloud ? 0 : n.own;
-      n.apparent = n.kind === "dir" ? 0 : (n.logical ?? (cloud ? n.own : Math.round(n.own * 0.97)));
-      n.items = 0;
+      // Folders start from what a snapshot left out of them (nothing in the generated tree).
+      n.size = cloud ? 0 : n.own;
+      n.apparent = n.kind === "dir" ? (n.logical ?? 0) : (n.logical ?? (cloud ? n.own : Math.round(n.own * 0.97)));
+      n.items = n.hidden ?? 0;
       n.newest = n.mtime;
       n.pending = false;
       for (const c of n.children) {
@@ -353,8 +357,64 @@ class MockTree {
 const sizeIn = (n: MNode, mode: SizeMode) => (mode === "apparent" ? n.apparent : n.size);
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-export function mockBackend(): Backend {
-  const full = new MockTree("Macintosh HD", macintoshHD());
+/** `?scan=/` opens that scan right away. `?snapshot=<url>` replays a real scan saved by
+ *  `cargo run --example snapshot` instead of the generated disk (the website's demo). */
+const params = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
+const snapshotUrl = (() => {
+  const url = params.get("snapshot");
+  return url && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(url) ? url : null; // files of this site only
+})();
+
+/** `[name, kind, disk, apparent, items, flags, mtime, children?]`, kind 0 = folder, 1 = file. */
+type SnapNode = [string, number, number, number, number, number, number, SnapNode[]?];
+interface Snapshot {
+  meta: { path: string; name: string; elapsedMs: number; files: number; dirs: number; errors: number; denied: number };
+  root: SnapNode;
+}
+
+function snapshotTree(s: Snapshot): MockTree {
+  const t = new MockTree(s.meta.name, []);
+  const fill = (n: MNode, [, , disk, apparent, items, flags, mtime, kids = []]: SnapNode) => {
+    n.flags = flags;
+    n.mtime = mtime;
+    let restDisk = disk;
+    let restApparent = apparent;
+    let restItems = items;
+    for (const k of kids) {
+      const c = t.add(k[0], k[1] === 0 ? "dir" : k[1] === 1 ? "file" : "other", 0, 0, n);
+      if (k[1] === 0) {
+        fill(c, k);
+      } else {
+        c.own = k[2];
+        c.logical = k[3];
+        c.flags = k[5];
+        c.mtime = k[6];
+      }
+      restDisk -= k[2];
+      restApparent -= k[3];
+      restItems -= k[4] + 1;
+    }
+    n.own = Math.max(0, restDisk);
+    n.logical = Math.max(0, restApparent);
+    n.hidden = Math.max(0, restItems);
+  };
+  fill(t.root, s.root);
+  return t;
+}
+
+async function loadSnapshot(): Promise<Snapshot | null> {
+  if (!snapshotUrl) return null;
+  try {
+    const res = await fetch(snapshotUrl);
+    return res.ok ? ((await res.json()) as Snapshot) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function mockBackend(): Promise<Backend> {
+  const snap = await loadSnapshot();
+  const full = snap ? snapshotTree(snap) : new MockTree("Macintosh HD", macintoshHD());
   let tree = full;
   let scanId = 0;
   let rootPath = "/";
@@ -364,6 +424,14 @@ export function mockBackend(): Backend {
   const userHome = () => full.nodes.find((n) => n.name === "alex" && n.parent?.name === "Users")!;
 
   const stats = () => {
+    if (snap) {
+      // The snapshot keeps only the biggest items: count with the real scan's totals.
+      tree.compute();
+      const m = snap.meta;
+      const f = Number.isFinite(tree.revealed) ? Math.min(1, tree.revealed / tree.nodes.length) : 1;
+      const part = (v: number) => Math.round(v * f);
+      return { files: part(m.files), dirs: part(m.dirs), bytes: tree.root.size, errors: part(m.errors), denied: part(m.denied) };
+    }
     let files = 0;
     let dirs = 0;
     for (const n of tree.nodes) {
@@ -376,15 +444,16 @@ export function mockBackend(): Backend {
     return { files, dirs, bytes: tree.root.size, errors: deniedCount, denied: deniedCount };
   };
 
-  const simulate = (onEvent: (e: ScanEvent) => void, ms: number, done: () => void) => {
+  /** Reveals the tree over `ms`; `realMs` is how long the scan being replayed really took. */
+  const simulate = (onEvent: (e: ScanEvent) => void, ms: number, done: () => void, realMs?: number) => {
     if (timer) clearInterval(timer);
     currentListener = onEvent;
     const started = performance.now();
     const total = tree.nodes.length;
     tree.revealed = 0;
     timer = setInterval(() => {
-      const elapsed = performance.now() - started;
-      const f = Math.min(1, elapsed / ms);
+      const f = Math.min(1, (performance.now() - started) / ms);
+      const elapsed = realMs === undefined ? performance.now() - started : realMs * f;
       tree.revealed = f >= 1 ? Number.POSITIVE_INFINITY : Math.floor(total * f * f);
       const current = tree.path(tree.nodes[Math.min(total - 1, Math.floor(total * f * f))], rootPath);
       if (f >= 1) {
@@ -430,6 +499,13 @@ export function mockBackend(): Backend {
 
   return {
     async listLocations() {
+      if (snap) {
+        const p = snap.meta.path;
+        return {
+          items: [{ kind: "volume" as const, name: p, path: p, total: null, available: null, fsType: "apfs", readOnly: true }],
+          fullDiskAccess: true,
+        };
+      }
       return {
         items: [
           { kind: "home", name: "alex", path: "/Users/alex", total: null, available: null, fsType: null, readOnly: false },
@@ -445,6 +521,15 @@ export function mockBackend(): Backend {
     async startScan(path, onEvent) {
       await delay(80);
       scanId++;
+      if (snap) {
+        tree = full;
+        rootPath = snap.meta.path;
+        tree.touch();
+        // A replay of the saved scan, slow enough to see; the status bar shows the real time.
+        simulate(onEvent, Math.min(4000, Math.max(1800, snap.meta.elapsedMs)), () => {}, snap.meta.elapsedMs);
+        tree.compute();
+        return { scanId, root: tree.info(tree.root), rootPath, volume: null };
+      }
       const home = path.startsWith("/Users/alex");
       rootPath = home ? "/Users/alex" : "/";
       if (home) {
@@ -518,6 +603,8 @@ export function mockBackend(): Backend {
       };
       const best: { g: number; n: MNode; reason: SizeGap["top"][number]["reason"] }[] = [];
       const walk = (n: MNode) => {
+        // What a snapshot left out of this folder adds to the gap.
+        if ((n.logical ?? 0) > n.own && n.kind === "dir") gap.other += (n.logical ?? 0) - n.own;
         for (const c of tree.visibleChildren(n)) {
           if (c.kind === "dir") {
             walk(c);
@@ -599,7 +686,7 @@ export function mockBackend(): Backend {
     },
 
     async initialPath() {
-      return null;
+      return snap ? snap.meta.path : params.get("scan");
     },
 
     async launchFlags() {
@@ -611,6 +698,11 @@ export function mockBackend(): Backend {
     },
 
     async analyzeCleanup(_scanId, onEvent) {
+      if (snap) {
+        // A saved scan of one folder has no clean-up data; don't show the generated one.
+        onEvent({ type: "done" });
+        return;
+      }
       for (const cat of cleanupCats) {
         if (cat.size <= 0 && cat.count <= 0 && !cat.denied) continue;
         await delay(140);
@@ -649,6 +741,7 @@ export function mockBackend(): Backend {
     },
 
     async trashInfo() {
+      if (snap) return { size: 0, items: 0, accessible: true };
       return { size: trashBytes, items: trashBytes > 0 ? 12 : 0, accessible: true };
     },
 
