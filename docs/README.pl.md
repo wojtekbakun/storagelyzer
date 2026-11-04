@@ -2,7 +2,7 @@
 
 *Opis dla użytkowników (po angielsku): [README](../README.md).*
 
-Analizator zajętości dysku dla macOS w stylu **Disk Usage Analyzer (Baobab) z Ubuntu**: cały dysk/folder to koło, każdy kolejny pierścień to głębszy poziom folderów. Najedź na wycinek, żeby zobaczyć nazwę, rozmiar i udział; kliknij, żeby wejść głębiej (z animacją przybliżenia); kliknij środek, żeby wrócić wyżej. Po lewej drzewo folderów posortowane od największych.
+Analizator zajętości dysku dla macOS w stylu **Disk Usage Analyzer (Baobab) z Ubuntu**: cały dysk/folder to koło, każdy kolejny pierścień to głębszy poziom folderów. Najedź na wycinek, żeby zobaczyć nazwę, rozmiar i udział, a linie wskażą, co jest w środku; kliknij, żeby wejść głębiej (z animacją przybliżenia); kliknij środek, żeby wrócić wyżej. Po lewej drzewo folderów posortowane od największych.
 
 Zbudowane na **Tauri 2** (Rust + WebView) i React/TypeScript.
 
@@ -40,6 +40,7 @@ open -a Storagelyzer --args --cleanup     # od razu asystent „Zwolnij miejsce�
 ## Funkcje
 
 - wykres pierścieniowy (sunburst) na Canvas: kolor zależny od kąta jak w Baobabie, głębsze poziomy jaśniejsze/ciemniejsze, pliki w stonowanych barwach, drobne elementy zgrupowane w szary wycinek „Mniejsze elementy”,
+- **po najechaniu na folder linie prowadzą do jego największych elementów** (do 10), każdy z nazwą i rozmiarem; etykiety stoją po obu stronach koła i rozsuwają się, żeby się nie nakładać, a linie biegną prosto od elementu i skręcają na wysokości etykiety, więc się nie krzyżują; pojawiają się i znikają płynnie, w trakcie skanowania jadą razem z rosnącymi segmentami (`ring/callouts.ts`),
 - płynne przybliżanie/oddalanie, okruszki ścieżki, ⌘↑ / ⌫ = poziom wyżej,
 - **wykres rośnie na żywo w trakcie skanowania — płynnie**: kolejne stany przechodzą w siebie (segmenty dopasowane po id rosną i przesuwają się, nowe wyłaniają się w obrębie rodzica, znikające zwijają się i gasną; `buildMorph` w `ring/layout.ts`), pierwszy obraz rysuje się zgodnie z ruchem wskazówek zegara, nieprzeskanowane jeszcze foldery delikatnie pulsują, licznik w środku odlicza zamiast skakać; to samo przejście działa przy zmianie Na dysku/Rozmiar i po usunięciu elementu,
 - drzewo folderów z kolumnami Rozmiar / Udział / Elementy / Zmodyfikowano, wirtualizowane (setki tysięcy wierszy), obsługa klawiatury (↑↓←→, Enter, Spacja = Quick Look, ⌘⌫ = Kosz),

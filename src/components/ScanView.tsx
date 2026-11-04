@@ -534,6 +534,8 @@ export function ScanView({ api, path, home, onBack }: Props) {
   };
 
   const focusSize = rings?.size ?? 0;
+  /** "Size" is much bigger than "On disk" here: a note under the chart explains why. */
+  const showNote = mode === "apparent" && rings !== null && rings.apparent - rings.disk > Math.max(1e8, rings.disk * 0.02);
 
 
   /** "logical 1.2 TB" / "on disk 3 GB" when the two sizes differ a lot. */
@@ -776,6 +778,7 @@ export function ScanView({ api, path, home, onBack }: Props) {
               openMenu({ id: s.id, name: s.name, kind: s.kind, flags: s.flags, isFocus: s.depth === 0 }, x, y)
             }
             renderTooltip={renderTooltip}
+            bottomInset={showNote ? 70 : 0}
             center={
               <div className="center-label">
                 <div className="center-name" title={focus?.path}>
@@ -801,7 +804,7 @@ export function ScanView({ api, path, home, onBack }: Props) {
               <span>{t("upTo", { name: crumbs[crumbs.length - 2].name })}</span>
             </button>
           ) : null}
-          {mode === "apparent" && rings && rings.apparent - rings.disk > Math.max(1e8, rings.disk * 0.02) ? (
+          {showNote && rings ? (
             <div className="chart-note">
               <InfoIcon size={13} />
               <span>
