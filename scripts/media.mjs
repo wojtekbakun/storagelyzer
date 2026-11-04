@@ -108,14 +108,14 @@ class Page {
   }
 
   /** The demo app in a fresh state. */
-  async open({ dark = true, dpr = 1, lang = "en" } = {}) {
+  async open({ dark = true, dpr = 1, lang = "en", url = APP } = {}) {
     await this.send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: dpr, mobile: false });
     await this.send("Emulation.setEmulatedMedia", {
       features: [{ name: "prefers-color-scheme", value: dark ? "dark" : "light" }],
     });
-    await this.navigate(APP);
+    await this.navigate(url);
     await this.eval(`localStorage.setItem("storagelyzer.lang", ${JSON.stringify(lang)})`);
-    await this.navigate(APP);
+    await this.navigate(url);
     await this.eval(`(() => {
       const c = document.createElement("div");
       c.className = "shot-cursor";
@@ -457,6 +457,37 @@ const JOBS = {
       await page.click(await page.center(".chart-note .link-button"), 800);
       await sleep(2800);
     });
+  },
+
+  /** Stills for the website (docs/index.html) in both languages: the demo disk, and the real
+   *  /System/Library scan saved by `cargo run --release --example snapshot`. */
+  async site(page) {
+    const jpg = (png, file) => {
+      const tmp = join(tmpdir(), `storagelyzer-${file}.png`);
+      writeFileSync(tmp, png);
+      execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", tmp, "-q:v", "3", join(OUT, "web", file)]);
+      rmSync(tmp, { force: true });
+      console.log(`  web/${file}`);
+    };
+    mkdirSync(join(OUT, "web"), { recursive: true });
+    for (const lang of ["en", "pl"]) {
+      await page.open({ dark: true, dpr: 2, lang });
+      await page.scanDisk();
+      await sleep(900);
+      const home = await page.findSegment(2, "alex");
+      await page.moveTo(home.x, home.y, 0);
+      await sleep(300);
+      jpg(await page.screenshot(), `demo-${lang}.jpg`);
+
+      // The snapshot replays itself on load (at most 4 s).
+      await page.open({ dark: true, dpr: 2, lang, url: `${APP}&snapshot=/docs/media/web/system-library.json` });
+      await page.waitUntil(`!!document.querySelector(".statusbar .status-size")`);
+      await sleep(4500);
+      const assets = await page.findSegment(1, "AssetsV2");
+      await page.moveTo(assets.x, assets.y, 0);
+      await sleep(300);
+      jpg(await page.screenshot(), `system-library-${lang}.jpg`);
+    }
   },
 
   async cleanup(page) {

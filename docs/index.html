@@ -41,6 +41,7 @@
   --ctl-fg: #ffffff;
   --ctl-line: rgba(255, 255, 255, 0.22);
   --shadow: 0 24px 48px -24px rgba(19, 26, 46, 0.4);
+  --shadow-strong: 0 40px 90px -36px rgba(8, 11, 22, 0.75);
   --seg-blue: #5b8cff;
   --seg-violet: #a46ff0;
   --seg-coral: #f46a7e;
@@ -61,6 +62,7 @@
     --band: #161c33;
     --code-bg: #080c18;
     --shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.75);
+    --shadow-strong: 0 40px 90px -36px rgba(0, 0, 0, 0.9);
     color-scheme: dark;
   }
 }
@@ -74,6 +76,7 @@
   --band: #161c33;
   --code-bg: #080c18;
   --shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.75);
+  --shadow-strong: 0 40px 90px -36px rgba(0, 0, 0, 0.9);
   color-scheme: dark;
 }
 
@@ -140,7 +143,7 @@ section[id] { scroll-margin-top: 16px; }
 .nav-links a { color: var(--band-muted); text-decoration: none; font-size: 0.95rem; font-weight: 500; }
 .nav-links a:hover { color: var(--band-fg); }
 .nav-tools { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-@media (min-width: 780px) {
+@media (min-width: 900px) {
   .nav { gap: 24px; }
   .nav-links { display: flex; }
   .nav-tools { margin-left: 8px; }
@@ -212,8 +215,77 @@ h1 {
 .spec dt { color: var(--band-muted); font: 500 0.76rem/1.4 var(--font-mono); letter-spacing: 0.07em; text-transform: uppercase; }
 .spec dd { margin: 0; text-align: right; font-weight: 600; font-size: 0.97rem; }
 
-.shot-band { background: linear-gradient(to bottom, var(--band) 0 56%, var(--bg) 56% 100%); }
-.shot-band img { width: 100%; margin-inline: auto; }
+.shot-band { padding-top: 8px; background: linear-gradient(to bottom, var(--band) 0 52%, var(--bg) 52% 100%); }
+
+/* Live demo: the app's own interface (docs/demo) in a window frame, scaled to fit. */
+.demo {
+  position: relative;
+  max-width: 1120px;
+  margin-inline: auto;
+  aspect-ratio: 1240 / 800;
+  overflow: hidden;
+  border: 1px solid var(--band-line);
+  border-radius: 12px;
+  background: var(--frame-bg);
+  box-shadow: var(--shadow-strong);
+}
+.demo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.demo:not([data-source="real"]) .poster-real,
+.demo[data-source="real"] .poster-demo { display: none; }
+.demo iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1240px;
+  height: 800px;
+  border: 0;
+  transform: scale(var(--s, 1));
+  transform-origin: 0 0;
+  opacity: 0;
+}
+.demo.is-live iframe { opacity: 1; }
+.demo-open {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--band-fg);
+  color: var(--band);
+  box-shadow: var(--shadow);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.demo.is-live .demo-open { display: none; }
+.demo-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  max-width: 1120px;
+  margin: 16px auto 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.demo-bar p { margin: 0; }
+.demo:not([data-source="real"]) ~ .demo-bar .note-real,
+.demo[data-source="real"] ~ .demo-bar .note-demo { display: none; }
+.switch { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.switch button {
+  appearance: none;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 0.88rem/1.1 var(--font-text);
+  cursor: pointer;
+}
+.switch button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 
 /* ---------- Sections ---------- */
 .section { padding-block: clamp(64px, 8vw, 104px); }
@@ -313,44 +385,64 @@ h3 {
 .traits p { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
 .mac-shot { margin: 0; min-width: 0; }
 
-/* Under the hood */
-.bench {
-  display: grid;
-  gap: 24px 48px;
-  margin: 0 0 clamp(48px, 6vw, 72px);
-  padding: clamp(20px, 3vw, 32px);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--bg);
-}
-@media (min-width: 900px) { .bench { grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); align-items: center; } }
-.bench-stat { margin: 0; }
-.bench-stat strong {
+/* Comparison: the same folder in the Terminal and in the app, then measured times */
+.compare { display: grid; gap: 48px; }
+@media (min-width: 960px) { .compare { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; align-items: start; } }
+.compare-col { display: grid; gap: 18px; align-content: start; min-width: 0; margin: 0; }
+.compare-col h3 { font-size: 1.25rem; }
+.tag {
   display: block;
-  font: 800 clamp(3rem, 2rem + 4vw, 4.75rem)/1 var(--font-display);
-  letter-spacing: -0.03em;
-  color: var(--seg-blue);
+  margin-bottom: 6px;
+  color: var(--muted);
+  font: 500 0.76rem/1.3 var(--font-mono);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
-.bench-stat span { display: block; margin-top: 6px; color: var(--muted); font-weight: 500; }
-.bench-chart { margin: 0; min-width: 0; }
-.bench-chart figcaption { margin-bottom: 16px; font-weight: 600; }
-.bench-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "name val" "bar bar";
-  gap: 6px 14px;
-  align-items: center;
-  padding-block: 8px;
+.term pre { font-size: 0.8rem; line-height: 1.65; tab-size: 6; }
+@media (max-width: 480px) { .term pre { padding-inline: 14px; font-size: 0.72rem; } }
+.term .dim { color: var(--code-muted); }
+.still { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--frame-bg); box-shadow: var(--shadow); }
+.still img { width: 100%; }
+.checks { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 0.95rem; }
+.checks li { display: flex; gap: 10px; }
+.checks li::before { content: ""; flex: none; width: 7px; height: 7px; margin-top: 0.62em; border-radius: 2px; background: var(--c); }
+.explore {
+  justify-self: start;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
 }
-@media (min-width: 640px) {
-  .bench-row { grid-template-columns: 8.5rem minmax(0, 1fr) 4.5rem; grid-template-areas: "name bar val"; }
+.explore:hover { border-color: var(--accent); }
+.compare-foot { max-width: 62em; margin: 32px 0 0; color: var(--muted); font-size: 0.92rem; }
+
+.speed { margin-top: clamp(56px, 7vw, 88px); }
+.speed > p { max-width: 46rem; margin: 10px 0 0; color: var(--muted); }
+.table-scroll { margin-top: 24px; overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
+.speed table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 0.95rem; }
+.speed th, .speed td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
-.bench-name { grid-area: name; font-weight: 600; }
-.bench-track { grid-area: bar; height: 14px; overflow: hidden; border-radius: 4px; background: var(--line); }
-.bench-bar { display: block; width: calc(var(--v) * 100%); height: 100%; border-radius: 4px; background: var(--muted); }
-.bench-bar.is-us { background: var(--seg-blue); }
-.bench-val { grid-area: val; text-align: right; font: 600 0.95rem/1 var(--font-mono); font-variant-numeric: tabular-nums; }
-.bench-note { margin: 14px 0 0; color: var(--muted); font-size: 0.92rem; }
+.speed th:first-child, .speed td:first-child, .speed th.bars-h { text-align: left; }
+.speed thead th { color: var(--muted); font: 500 0.74rem/1.3 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.speed tbody tr:last-child td { border-bottom: 0; }
+.speed td.bars { width: 26%; min-width: 150px; text-align: left; }
+.bars span { display: block; width: calc(var(--v) * 100%); height: 7px; border-radius: 3px; }
+.bars .b-du { background: var(--muted); opacity: 0.5; }
+.bars .b-us { margin-top: 4px; background: var(--seg-blue); }
+.speed td.x { color: var(--accent); font-weight: 700; }
+.legend-inline { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 12px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 0.88rem; }
+.legend-inline li { display: inline-flex; align-items: center; gap: 8px; }
+.legend-inline li[style]::before { content: ""; width: 14px; height: 7px; border-radius: 3px; background: var(--c); opacity: var(--o, 1); }
+.method { max-width: 62em; margin: 16px 0 0; color: var(--muted); font-size: 0.9rem; }
 
 .notes {
   display: grid;
@@ -460,6 +552,7 @@ h3 {
     <a class="brand" href="#top"><img src="media/icon.png" alt="" width="32" height="32">Storagelyzer</a>
     <nav class="nav-links" aria-label="Sections">
       <a href="#features"><span lang="en">Features</span><span lang="pl">Funkcje</span></a>
+      <a href="#compare"><span lang="en">Comparison</span><span lang="pl">Porównanie</span></a>
       <a href="#engineering"><span lang="en">Under the hood</span><span lang="pl">Pod maską</span></a>
       <a href="#build"><span lang="en">Build</span><span lang="pl">Instalacja</span></a>
     </nav>
@@ -495,9 +588,26 @@ h3 {
 
 <div class="shot-band">
   <div class="wrap">
-    <img src="media/main-dark.png" width="2704" height="1824" fetchpriority="high"
-      alt="The Storagelyzer window: a folder list beside a sunburst chart of the whole disk, with labels pointing to the biggest folders in the user's home folder"
-      data-alt-pl="Okno Storagelyzera: lista folderów obok wykresu pierścieniowego całego dysku, z etykietami wskazującymi największe foldery w folderze domowym użytkownika">
+    <div class="demo" id="live-demo" data-source="demo">
+      <img class="poster-demo" lang="en" src="media/web/demo-en.jpg" width="2480" height="1600" loading="lazy"
+        alt="The Storagelyzer window: a folder list beside a sunburst chart of the whole disk, with labels pointing to the biggest folders in the user's home folder">
+      <img class="poster-demo" lang="pl" src="media/web/demo-pl.jpg" width="2480" height="1600" loading="lazy"
+        alt="Okno Storagelyzera: lista folderów obok wykresu pierścieniowego całego dysku, z etykietami wskazującymi największe foldery w folderze domowym użytkownika">
+      <img class="poster-real" lang="en" src="media/web/system-library-en.jpg" width="2480" height="1600" loading="lazy"
+        alt="Storagelyzer with a real scan of /System/Library: 29.6 GB, with lines pointing to the biggest items in AssetsV2">
+      <img class="poster-real" lang="pl" src="media/web/system-library-pl.jpg" width="2480" height="1600" loading="lazy"
+        alt="Storagelyzer z prawdziwym skanem /System/Library: 29,6 GB, linie wskazują największe elementy w AssetsV2">
+      <a class="demo-open" data-demo-link href="demo/index.html?shot&amp;scan=/" target="_blank" rel="noopener"><span lang="en">Open the live demo</span><span lang="pl">Otwórz demo na żywo</span></a>
+    </div>
+    <div class="demo-bar">
+      <div class="switch" role="group" aria-label="Data / Dane">
+        <button type="button" id="src-demo" data-source="demo" aria-pressed="true"><span lang="en">Demo disk</span><span lang="pl">Dysk demo</span></button>
+        <button type="button" id="src-real" data-source="real" aria-pressed="false"><span lang="en">Real scan: /System/Library</span><span lang="pl">Prawdziwy skan: /System/Library</span></button>
+      </div>
+      <p class="note-demo"><span lang="en">Live demo on generated data. Hover the rings, click a folder to zoom in, click the centre to go back.</span><span lang="pl">Demo na żywo na wygenerowanych danych. Najedź na pierścienie, kliknij folder, żeby go przybliżyć, kliknij środek, żeby wrócić.</span></p>
+      <p class="note-real"><span lang="en">A real scan of /System/Library from the author's Mac, kept to its 19,924 biggest items.</span><span lang="pl">Prawdziwy skan /System/Library z Maca autora, ograniczony do 19&nbsp;924 największych elementów.</span></p>
+      <a data-demo-link href="demo/index.html?shot&amp;scan=/" target="_blank" rel="noopener"><span lang="en">Open in a new tab ↗</span><span lang="pl">Otwórz w nowej karcie ↗</span></a>
+    </div>
   </div>
 </div>
 
@@ -642,6 +752,136 @@ h3 {
     </div>
   </section>
 
+  <section class="section section-alt" id="compare">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="kicker"><span lang="en">Comparison</span><span lang="pl">Porównanie</span></p>
+        <h2><span lang="en">One folder, two ways</span><span lang="pl">Jeden folder, dwa sposoby</span></h2>
+        <p lang="en">macOS's own Storage settings sum the disk up in categories, and whatever the system can't place lands in System Data, which <a href="https://support.apple.com/en-us/102624">you can't manage directly</a>. To find out which folders take the space, the usual tool is du in the Terminal. Here is the same folder both ways, on the author's Mac.</p>
+        <p lang="pl">Ustawienia „Pamięć masowa” w macOS podsumowują dysk w kategoriach, a to, czego system nie przypisze, trafia do „Danych systemowych”, <a href="https://support.apple.com/pl-pl/102624">którymi nie da się zarządzać bezpośrednio</a>. Żeby sprawdzić, które foldery zajmują miejsce, zwykle sięga się po du w Terminalu. Oto ten sam folder na dwa sposoby, na Macu autora.</p>
+      </div>
+
+      <div class="compare">
+        <figure class="compare-col" style="--c: var(--muted)">
+          <figcaption>
+            <span class="tag">Terminal</span>
+            <h3><span lang="en">du: a list, one level at a time</span><span lang="pl">du: lista, poziom po poziomie</span></h3>
+          </figcaption>
+          <div class="code term">
+            <div class="code-head"><span>zsh</span></div>
+            <pre><code><span class="dim">$</span> time du -sh /System/Library/* \
+    | sort -hr | head -12
+ 17G	/System/Library/AssetsV2
+4.3G	/System/Library/PrivateFrameworks
+954M	/System/Library/CoreServices
+920M	/System/Library/Frameworks
+812M	/System/Library/LinguisticData
+811M	/System/Library/Templates
+564M	/System/Library/Fonts
+521M	/System/Library/Desktop Pictures
+336M	/System/Library/Extensions
+282M	/System/Library/ExtensionKit
+260M	/System/Library/Assistant
+179M	/System/Library/Components
+<span class="dim">real 5.66s</span></code></pre>
+          </div>
+          <ul class="checks">
+            <li><span lang="en">One level only. To see inside AssetsV2, you run it again on that folder.</span><span lang="pl">Tylko jeden poziom. Żeby zajrzeć do AssetsV2, trzeba uruchomić polecenie jeszcze raz na tym folderze.</span></li>
+            <li><span lang="en">Nothing shows up until every file has been read.</span><span lang="pl">Nic się nie pojawia, dopóki nie zostaną przeczytane wszystkie pliki.</span></li>
+            <li><span lang="en">Sizes only: no item counts, no logical size, nothing to click.</span><span lang="pl">Same rozmiary: bez liczby elementów, rozmiaru logicznego i niczego do kliknięcia.</span></li>
+          </ul>
+        </figure>
+
+        <figure class="compare-col" style="--c: var(--seg-blue)">
+          <figcaption>
+            <span class="tag">Storagelyzer</span>
+            <h3><span lang="en">Storagelyzer: the whole folder as a map</span><span lang="pl">Storagelyzer: cały folder jako mapa</span></h3>
+          </figcaption>
+          <div class="still">
+            <img lang="en" src="media/web/system-library-en.jpg" width="2480" height="1600" loading="lazy"
+              alt="Storagelyzer showing /System/Library: AssetsV2 takes 17.8 GB, 60% of 29.6 GB, and lines point to the biggest items inside it">
+            <img lang="pl" src="media/web/system-library-pl.jpg" width="2480" height="1600" loading="lazy"
+              alt="Storagelyzer z /System/Library: AssetsV2 zajmuje 17,8 GB, 60% z 29,6 GB, a linie wskazują największe elementy w środku">
+          </div>
+          <ul class="checks">
+            <li><span lang="en">Six levels at once. Hover a folder to see what's inside it, click to go in.</span><span lang="pl">Sześć poziomów naraz. Najedź na folder, żeby zobaczyć, co jest w środku, kliknij, żeby wejść.</span></li>
+            <li><span lang="en">The chart fills in while the scan runs. This scan took 1.8 s.</span><span lang="pl">Wykres wypełnia się w trakcie skanu. Ten skan trwał 1,8 s.</span></li>
+            <li><span lang="en">Size on disk and logical size, item counts, and a list of the 68 items it could not read.</span><span lang="pl">Rozmiar na dysku i logiczny, liczba elementów oraz lista 68 elementów bez dostępu.</span></li>
+          </ul>
+          <a class="explore" href="demo/index.html?shot&amp;snapshot=../media/web/system-library.json" target="_blank" rel="noopener" data-explore-real><span lang="en">Explore this scan in the live demo</span><span lang="pl">Przejrzyj ten skan w demo na żywo</span></a>
+        </figure>
+      </div>
+      <p class="compare-foot" lang="en">Both sides are real output for /System/Library on the same Mac, one run each; the table below has medians of seven. Both report the same total, 29,574,684,672 bytes. du -h counts in binary units (1G is 1024³ bytes), which is why its 17G for AssetsV2 is the 17.8 GB on the right. For the demo, the scan is kept to its 19,924 biggest items, and everything smaller is drawn in the grey slices.</p>
+      <p class="compare-foot" lang="pl">Obie strony to prawdziwy wynik dla /System/Library na tym samym Macu, po jednym uruchomieniu; tabela niżej podaje mediany z siedmiu. Oba narzędzia podają tę samą sumę: 29&nbsp;574&nbsp;684&nbsp;672 bajtów. du -h liczy w jednostkach binarnych (1G to 1024³ bajtów), dlatego jego 17G dla AssetsV2 to 17,8 GB po prawej. W demo skan jest ograniczony do 19&nbsp;924 największych elementów, a wszystko mniejsze trafia do szarych wycinków.</p>
+
+      <div class="speed">
+        <h3><span lang="en">Speed, measured</span><span lang="pl">Szybkość, zmierzona</span></h3>
+        <p lang="en">Both tools read the same four folders, seven times each. The table shows the median time of the whole process, from start to exit.</p>
+        <p lang="pl">Oba narzędzia czytały te same cztery foldery, każde po siedem razy. Tabela pokazuje medianę czasu całego procesu, od uruchomienia do zakończenia.</p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Folder</th>
+                <th scope="col"><span lang="en">Items</span><span lang="pl">Elementy</span></th>
+                <th scope="col"><span lang="en">On disk</span><span lang="pl">Na dysku</span></th>
+                <th scope="col">du</th>
+                <th scope="col">Storagelyzer</th>
+                <th scope="col" class="bars-h"><span lang="en">Time to scale</span><span lang="pl">Czas w skali</span></th>
+                <th scope="col"><span lang="en">Faster</span><span lang="pl">Szybciej</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>/System/Library</code></td>
+                <td><span lang="en">464,611</span><span lang="pl">464&nbsp;611</span></td>
+                <td><span lang="en">29.6 GB</span><span lang="pl">29,6 GB</span></td>
+                <td><span lang="en">5.83 s</span><span lang="pl">5,83 s</span></td>
+                <td><span lang="en">2.12 s</span><span lang="pl">2,12 s</span></td>
+                <td class="bars"><span class="b-du" style="--v: 1"></span><span class="b-us" style="--v: 0.3636"></span></td>
+                <td class="x"><span lang="en">2.7×</span><span lang="pl">2,7×</span></td>
+              </tr>
+              <tr>
+                <td><code>/Applications</code></td>
+                <td><span lang="en">410,348</span><span lang="pl">410&nbsp;348</span></td>
+                <td><span lang="en">38.3 GB</span><span lang="pl">38,3 GB</span></td>
+                <td><span lang="en">3.80 s</span><span lang="pl">3,80 s</span></td>
+                <td><span lang="en">0.77 s</span><span lang="pl">0,77 s</span></td>
+                <td class="bars"><span class="b-du" style="--v: 1"></span><span class="b-us" style="--v: 0.2026"></span></td>
+                <td class="x"><span lang="en">4.9×</span><span lang="pl">4,9×</span></td>
+              </tr>
+              <tr>
+                <td><code>/Library</code></td>
+                <td><span lang="en">141,555</span><span lang="pl">141&nbsp;555</span></td>
+                <td><span lang="en">6.7 GB</span><span lang="pl">6,7 GB</span></td>
+                <td><span lang="en">0.78 s</span><span lang="pl">0,78 s</span></td>
+                <td><span lang="en">0.36 s</span><span lang="pl">0,36 s</span></td>
+                <td class="bars"><span class="b-du" style="--v: 1"></span><span class="b-us" style="--v: 0.4615"></span></td>
+                <td class="x"><span lang="en">2.2×</span><span lang="pl">2,2×</span></td>
+              </tr>
+              <tr>
+                <td><code>/usr</code></td>
+                <td><span lang="en">34,699</span><span lang="pl">34&nbsp;699</span></td>
+                <td><span lang="en">2.0 GB</span><span lang="pl">2,0 GB</span></td>
+                <td><span lang="en">0.14 s</span><span lang="pl">0,14 s</span></td>
+                <td><span lang="en">0.05 s</span><span lang="pl">0,05 s</span></td>
+                <td class="bars"><span class="b-du" style="--v: 1"></span><span class="b-us" style="--v: 0.3571"></span></td>
+                <td class="x"><span lang="en">2.8×</span><span lang="pl">2,8×</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="legend-inline">
+          <li style="--c: var(--muted); --o: 0.5">du</li>
+          <li style="--c: var(--seg-blue)">Storagelyzer</li>
+          <li><span lang="en">In each row both bars share one scale: the full bar is du's time.</span><span lang="pl">W każdym wierszu oba paski mają tę samą skalę: pełny pasek to czas du.</span></li>
+        </ul>
+        <p class="method" lang="en">Measured on 4 November 2026 on an Apple M4 Max with 48 GB of RAM, macOS 27.0.1, with a warm cache: each tool ran once before the seven timed runs. du runs as <code>du -sk</code>, and for /Library as <code>du -skx</code>, because an iOS simulator disk image is mounted inside it: a separate 17 GB disk that Storagelyzer doesn't walk into. With that, both report the same total, to the byte, for every folder. A first scan after a restart, with a cold cache, is slower for both and isn't measured here. The script is <a href="https://github.com/wojtekbakun/storagelyzer/blob/main/scripts/compare-du.py">scripts/compare-du.py</a>, and every run is listed in <a href="https://github.com/wojtekbakun/storagelyzer/blob/main/docs/benchmark.md">docs/benchmark.md</a>.</p>
+        <p class="method" lang="pl">Pomiar z 4 listopada 2026 r. na Apple M4 Max z 48 GB RAM, macOS 27.0.1, przy rozgrzanej pamięci podręcznej: każde narzędzie uruchomiło się raz przed siedmioma mierzonymi przebiegami. du działa jako <code>du -sk</code>, a dla /Library jako <code>du -skx</code>, bo w środku jest podmontowany obraz dysku symulatora iOS: osobny dysk o rozmiarze 17 GB, do którego Storagelyzer nie wchodzi. Wtedy oba narzędzia podają dla każdego folderu tę samą sumę co do bajta. Pierwszy skan po restarcie, bez danych w pamięci podręcznej, jest wolniejszy dla obu i tu nie był mierzony. Skrypt to <a href="https://github.com/wojtekbakun/storagelyzer/blob/main/scripts/compare-du.py">scripts/compare-du.py</a>, a wszystkie przebiegi są w <a href="https://github.com/wojtekbakun/storagelyzer/blob/main/docs/benchmark.md">docs/benchmark.md</a>.</p>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="details" aria-labelledby="details-title">
     <div class="wrap mac">
       <div class="mac-text">
@@ -673,24 +913,6 @@ h3 {
         <h2><span lang="en">A scanner tuned for APFS</span><span lang="pl">Skaner dostrojony do APFS</span></h2>
         <p lang="en">A disk analyzer is only as good as its scanner. Storagelyzer's is written in Rust around how APFS actually behaves, and the interface is React and TypeScript, drawn on a canvas in the system WebView.</p>
         <p lang="pl">Analizator dysku jest tak dobry, jak jego skaner. Ten w Storagelyzerze jest napisany w Ruście pod to, jak naprawdę zachowuje się APFS, a interfejs to React i TypeScript, rysowany na canvasie w systemowym WebView.</p>
-      </div>
-
-      <div class="bench">
-        <p class="bench-stat"><strong>6.5×</strong><span><span lang="en">faster than <code>du</code></span><span lang="pl">szybciej niż <code>du</code></span></span></p>
-        <figure class="bench-chart">
-          <figcaption><span lang="en">Reading /Applications, 410,000 items</span><span lang="pl">Odczyt /Applications, 410 tys. elementów</span></figcaption>
-          <div class="bench-row">
-            <span class="bench-name">Storagelyzer</span>
-            <span class="bench-track"><span class="bench-bar is-us" style="--v: 0.1528"></span></span>
-            <span class="bench-val"><span lang="en">0.55 s</span><span lang="pl">0,55 s</span></span>
-          </div>
-          <div class="bench-row">
-            <span class="bench-name"><code>du</code></span>
-            <span class="bench-track"><span class="bench-bar" style="--v: 1"></span></span>
-            <span class="bench-val"><span lang="en">3.6 s</span><span lang="pl">3,6 s</span></span>
-          </div>
-          <p class="bench-note"><span lang="en">Measured on the author's Mac. Both report the same total, to the byte.</span><span lang="pl">Pomiar na Macu autora. Oba podają tę samą sumę, co do bajta.</span></p>
-        </figure>
       </div>
 
       <ul class="notes">
@@ -844,6 +1066,23 @@ npm run install-app</code></pre>
   const videos = Array.from(document.querySelectorAll("video[data-auto]"));
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+  // Live demo: the app's own interface (docs/demo) in a frame scaled to fit the page.
+  const stage = document.getElementById("live-demo");
+  const SOURCES = {
+    demo: "demo/index.html?shot&scan=/",
+    real: "demo/index.html?shot&snapshot=../media/web/system-library.json",
+  };
+  const wideEnough = window.matchMedia("(min-width: 760px)");
+  let frame = null;
+  let frameLang = null;
+
+  function loadFrame() {
+    frameLang = lang;
+    frame.title = lang === "pl" ? "Storagelyzer na żywo" : "Storagelyzer, live";
+    stage.classList.remove("is-live");
+    frame.src = SOURCES[stage.dataset.source];
+  }
+
   function syncButton(v) {
     const b = v.parentElement.querySelector(".play");
     if (!b) return;
@@ -867,6 +1106,9 @@ npm run install-app</code></pre>
     document.querySelectorAll("[data-set-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setLang === lang)));
     document.querySelectorAll(".copy").forEach((b) => { b.textContent = T[lang].copy; });
     videos.forEach(syncButton);
+    // The demo reads its language from this key; the site and the demo share it.
+    try { localStorage.setItem("storagelyzer.lang", lang); } catch (e) { /* storage blocked */ }
+    if (frame && frameLang !== lang) loadFrame();
     if (remember) {
       try { localStorage.setItem(KEY, lang); } catch (e) { /* storage blocked: the choice lasts until reload */ }
     }
@@ -877,6 +1119,39 @@ npm run install-app</code></pre>
   try { saved = localStorage.getItem(KEY); } catch (e) { saved = null; }
   const browser = ((navigator.languages && navigator.languages[0]) || navigator.language || "").toLowerCase();
   setLang(saved || (browser.startsWith("pl") ? "pl" : "en"), false);
+
+  // Wide screens get the live app; phones keep the still and a link, the window is too wide there.
+  function fitFrame() {
+    if (frame) stage.style.setProperty("--s", String(stage.clientWidth / 1240));
+  }
+  function mountFrame() {
+    if (frame || !wideEnough.matches) return;
+    frame = document.createElement("iframe");
+    frame.addEventListener("load", () => stage.classList.add("is-live"));
+    stage.appendChild(frame);
+    fitFrame();
+    loadFrame();
+  }
+  function showSource(source) {
+    stage.dataset.source = source;
+    document.querySelectorAll(".switch [data-source]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.source === source)));
+    document.querySelectorAll("[data-demo-link]").forEach((a) => a.setAttribute("href", SOURCES[source]));
+    if (frame) loadFrame();
+  }
+  document.querySelectorAll(".switch [data-source]").forEach((b) => b.addEventListener("click", () => showSource(b.dataset.source)));
+  const explore = document.querySelector("[data-explore-real]");
+  if (explore) {
+    explore.addEventListener("click", (e) => {
+      if (!frame) return; // no live demo on this screen: the link opens it in a new tab
+      e.preventDefault();
+      showSource("real");
+      stage.scrollIntoView({ behavior: reduce.matches ? "auto" : "smooth", block: "center" });
+    });
+  }
+  if ("ResizeObserver" in window) new ResizeObserver(fitFrame).observe(stage);
+  else window.addEventListener("resize", fitFrame);
+  if (wideEnough.addEventListener) wideEnough.addEventListener("change", mountFrame);
+  mountFrame();
 
   // Recordings play while on screen, never on their own with Reduce Motion, and can always be paused.
   videos.forEach((v) => {
