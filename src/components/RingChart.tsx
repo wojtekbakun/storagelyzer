@@ -58,9 +58,16 @@ type ChartPalette = Palette & { callout: CalloutStyle };
 function readPalette(el: HTMLElement): ChartPalette {
   const st = getComputedStyle(el);
   const dark = st.getPropertyValue("--is-dark").trim() === "1";
-  const parse = (v: string, fallback: [number, number, number]) => {
-    const m = v.match(/\d+(\.\d+)?/g);
-    return m && m.length >= 3 ? ([+m[0], +m[1], +m[2]] as [number, number, number]) : fallback;
+  // `rgb(241, 241, 244)` in the source, but the production build minifies it to `#f1f1f4`.
+  const parse = (v: string, fallback: [number, number, number]): [number, number, number] => {
+    const s = v.trim();
+    const hex = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(s)?.[1];
+    if (hex) {
+      const full = hex.length <= 4 ? [...hex].map((c) => c + c).join("") : hex;
+      return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16)) as [number, number, number];
+    }
+    const m = s.match(/\d+(\.\d+)?/g);
+    return m && m.length >= 3 ? [+m[0], +m[1], +m[2]] : fallback;
   };
   const v = (name: string, light: string, darkValue: string) => st.getPropertyValue(name).trim() || (dark ? darkValue : light);
   return {
