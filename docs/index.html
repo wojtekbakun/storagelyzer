@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Storagelyzer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Storagelyzer is a fast disk usage analyzer for macOS: an interactive sunburst of your disk, live scans and a safe clean-up assistant. Built with Rust, Tauri and React.">
+<meta name="theme-color" content="#141a2f">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Storagelyzer">
+<meta property="og:description" content="See what fills your Mac's disk and free it up safely. A disk usage analyzer for macOS, built with Rust and Tauri.">
+<meta property="og:image" content="https://raw.githubusercontent.com/wojtekbakun/storagelyzer/main/docs/media/main-dark.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="media/icon.png">
+<link rel="apple-touch-icon" href="media/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500..800&family=Red+Hat+Mono:wght@400..600&family=Red+Hat+Text:wght@400..600&display=swap">
+<style>
+/* Layout: a navy band (the app icon's colour) opens with the real window half over its edge;
+   feature rows alternate text and recordings; "Under the hood" holds a to-scale benchmark,
+   engineering notes, an architecture map and the codebase drawn as a macOS storage bar. */
+:root {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --fg: #131a2e;
+  --muted: #586079;
+  --line: rgba(19, 26, 46, 0.12);
+  --accent: #2f5fe4;
+  --band: #141a2f;
+  --band-fg: #eef1fa;
+  --band-muted: #a9b1ca;
+  --band-line: rgba(238, 241, 250, 0.16);
+  --code-bg: #10162a;
+  --code-fg: #e3e8f6;
+  --code-muted: #8f99b8;
+  --code-line: rgba(227, 232, 246, 0.12);
+  --frame-bg: #1d1e22;
+  --ctl-bg: rgba(16, 22, 42, 0.72);
+  --ctl-fg: #ffffff;
+  --ctl-line: rgba(255, 255, 255, 0.22);
+  --shadow: 0 24px 48px -24px rgba(19, 26, 46, 0.4);
+  --seg-blue: #5b8cff;
+  --seg-violet: #a46ff0;
+  --seg-coral: #f46a7e;
+  --seg-amber: #f2a531;
+  --seg-mint: #36c194;
+  --font-display: "Red Hat Display", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-text: "Red Hat Text", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Red Hat Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1020;
+    --surface: #141a2d;
+    --fg: #e8ecf7;
+    --muted: #9ba4bf;
+    --line: rgba(232, 236, 247, 0.12);
+    --accent: #88a8ff;
+    --band: #161c33;
+    --code-bg: #080c18;
+    --shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.75);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1020;
+  --surface: #141a2d;
+  --fg: #e8ecf7;
+  --muted: #9ba4bf;
+  --line: rgba(232, 236, 247, 0.12);
+  --accent: #88a8ff;
+  --band: #161c33;
+  --code-bg: #080c18;
+  --shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.75);
+  color-scheme: dark;
+}
+
+/* Language: English unless the page is switched to Polish. */
+:root:not([data-lang="pl"]) [lang="pl"],
+:root[data-lang="pl"] [lang="en"] { display: none !important; }
+[hidden] { display: none !important; }
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 1.0625rem/1.6 var(--font-text);
+  -webkit-font-smoothing: antialiased;
+}
+img, video { display: block; max-width: 100%; height: auto; }
+a { color: var(--accent); text-underline-offset: 0.18em; }
+code { font-family: var(--font-mono); font-size: 0.9em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.band :focus-visible { outline-color: var(--band-fg); }
+section[id] { scroll-margin-top: 16px; }
+
+.wrap {
+  max-width: 1184px;
+  margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (min-width: 768px) {
+  .wrap {
+    padding-left: max(32px, env(safe-area-inset-left, 0px));
+    padding-right: max(32px, env(safe-area-inset-right, 0px));
+  }
+}
+
+.skip {
+  position: absolute;
+  left: 16px;
+  top: -100px;
+  z-index: 20;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--fg);
+}
+.skip:focus { top: calc(env(safe-area-inset-top, 0px) + 12px); }
+
+/* ---------- Band: navigation and hero ---------- */
+.band { background: var(--band); color: var(--band-fg); }
+.nav { display: flex; align-items: center; gap: 12px; padding-block: 18px; }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+  font: 700 1.125rem/1 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.brand img { width: 32px; height: 32px; }
+.nav-links { display: none; gap: 24px; margin-left: auto; }
+.nav-links a { color: var(--band-muted); text-decoration: none; font-size: 0.95rem; font-weight: 500; }
+.nav-links a:hover { color: var(--band-fg); }
+.nav-tools { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+@media (min-width: 780px) {
+  .nav { gap: 24px; }
+  .nav-links { display: flex; }
+  .nav-tools { margin-left: 8px; }
+}
+.gh {
+  padding: 7px 13px;
+  border: 1px solid var(--band-line);
+  border-radius: 999px;
+  color: var(--band-fg);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.gh:hover { background: var(--band-line); }
+.lang { display: inline-flex; padding: 2px; border: 1px solid var(--band-line); border-radius: 999px; }
+.lang button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: transparent;
+  color: var(--band-muted);
+  font: 600 0.78rem/1 var(--font-mono);
+  cursor: pointer;
+}
+.lang button[aria-pressed="true"] { background: var(--band-fg); color: var(--band); }
+
+.hero { display: grid; gap: 40px; padding-block: 48px 40px; }
+@media (min-width: 900px) {
+  .hero { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); align-items: end; gap: 64px; padding-block: 72px 48px; }
+}
+.eyebrow {
+  margin: 0 0 18px;
+  color: var(--band-muted);
+  font: 500 0.8rem/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 0;
+  font: 800 clamp(2.5rem, 1.4rem + 4vw, 4.5rem)/1.02 var(--font-display);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.lead { margin: 22px 0 0; max-width: 34em; color: var(--band-muted); font-size: 1.15rem; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font: 600 1rem/1 var(--font-text);
+  text-decoration: none;
+}
+.btn-primary { background: var(--band-fg); color: var(--band); }
+.btn-primary:hover { background: var(--surface); }
+.btn-ghost { border: 1px solid var(--band-line); color: var(--band-fg); }
+.btn-ghost:hover { background: var(--band-line); }
+.spec { margin: 0; border-top: 1px solid var(--band-line); }
+.spec div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding-block: 11px;
+  border-bottom: 1px solid var(--band-line);
+}
+.spec dt { color: var(--band-muted); font: 500 0.76rem/1.4 var(--font-mono); letter-spacing: 0.07em; text-transform: uppercase; }
+.spec dd { margin: 0; text-align: right; font-weight: 600; font-size: 0.97rem; }
+
+.shot-band { background: linear-gradient(to bottom, var(--band) 0 56%, var(--bg) 56% 100%); }
+.shot-band img { width: 100%; margin-inline: auto; }
+
+/* ---------- Sections ---------- */
+.section { padding-block: clamp(64px, 8vw, 104px); }
+.section-alt { background: var(--surface); border-block: 1px solid var(--line); }
+.section-head { max-width: 46rem; margin-bottom: clamp(40px, 5vw, 64px); }
+.kicker {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font: 500 0.8rem/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+h2 {
+  margin: 0;
+  font: 800 clamp(2rem, 1.35rem + 2.3vw, 3rem)/1.08 var(--font-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.section-head p { margin: 18px 0 0; color: var(--muted); font-size: 1.1rem; }
+h3 {
+  margin: 0;
+  font: 700 1.35rem/1.25 var(--font-display);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* Feature rows */
+.features { display: grid; gap: clamp(64px, 9vw, 112px); }
+.feature { display: grid; gap: 28px; align-items: center; }
+@media (min-width: 900px) {
+  .feature { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; }
+  .feature:nth-child(even) { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .feature:nth-child(even) .feature-text { order: 2; }
+}
+.feature-text { min-width: 0; }
+.feature-text h3 { display: flex; align-items: center; gap: 12px; }
+.feature-text h3::before { content: ""; flex: none; width: 12px; height: 12px; border-radius: 3px; background: var(--c); }
+.feature-text p { margin: 14px 0 0; max-width: 34em; color: var(--muted); }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 0; padding: 0; list-style: none; }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.pill::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 2px; background: var(--c); }
+.media { margin: 0; min-width: 0; }
+.frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1000 / 644;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--frame-bg);
+  box-shadow: var(--shadow);
+}
+.frame video { width: 100%; height: 100%; object-fit: cover; }
+.play {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ctl-line);
+  border-radius: 50%;
+  background: var(--ctl-bg);
+  color: var(--ctl-fg);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.play[data-state="playing"] .i-play,
+.play:not([data-state="playing"]) .i-pause { display: none; }
+
+/* Made for macOS */
+.mac { display: grid; gap: 40px; align-items: center; }
+@media (min-width: 900px) { .mac { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; } }
+.mac-text { min-width: 0; }
+.mac-text > p { margin: 18px 0 0; color: var(--muted); font-size: 1.1rem; }
+.traits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 20px 28px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.traits li { min-width: 0; padding-top: 14px; border-top: 1px solid var(--line); }
+.traits b { display: block; font-weight: 600; }
+.traits p { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
+.mac-shot { margin: 0; min-width: 0; }
+
+/* Under the hood */
+.bench {
+  display: grid;
+  gap: 24px 48px;
+  margin: 0 0 clamp(48px, 6vw, 72px);
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+}
+@media (min-width: 900px) { .bench { grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); align-items: center; } }
+.bench-stat { margin: 0; }
+.bench-stat strong {
+  display: block;
+  font: 800 clamp(3rem, 2rem + 4vw, 4.75rem)/1 var(--font-display);
+  letter-spacing: -0.03em;
+  color: var(--seg-blue);
+}
+.bench-stat span { display: block; margin-top: 6px; color: var(--muted); font-weight: 500; }
+.bench-chart { margin: 0; min-width: 0; }
+.bench-chart figcaption { margin-bottom: 16px; font-weight: 600; }
+.bench-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "name val" "bar bar";
+  gap: 6px 14px;
+  align-items: center;
+  padding-block: 8px;
+}
+@media (min-width: 640px) {
+  .bench-row { grid-template-columns: 8.5rem minmax(0, 1fr) 4.5rem; grid-template-areas: "name bar val"; }
+}
+.bench-name { grid-area: name; font-weight: 600; }
+.bench-track { grid-area: bar; height: 14px; overflow: hidden; border-radius: 4px; background: var(--line); }
+.bench-bar { display: block; width: calc(var(--v) * 100%); height: 100%; border-radius: 4px; background: var(--muted); }
+.bench-bar.is-us { background: var(--seg-blue); }
+.bench-val { grid-area: val; text-align: right; font: 600 0.95rem/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.bench-note { margin: 14px 0 0; color: var(--muted); font-size: 0.92rem; }
+
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 36px 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.note { min-width: 0; padding-top: 18px; border-top: 1px solid var(--line); }
+.note-tag { display: block; margin-bottom: 12px; color: var(--accent); font-size: 0.8rem; font-weight: 500; overflow-wrap: anywhere; }
+.note h3 { font-size: 1.15rem; }
+.note p { margin: 10px 0 0; color: var(--muted); font-size: 0.97rem; }
+
+.arch { margin: clamp(56px, 7vw, 88px) 0 0; }
+.arch > h3 { margin-bottom: 20px; }
+.layer { padding: clamp(16px, 2.5vw, 24px); border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
+.layer-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; margin-bottom: 14px; }
+.layer-name { font: 700 1.1rem/1.2 var(--font-display); }
+.layer-tech { color: var(--muted); font: 500 0.82rem/1.4 var(--font-mono); }
+.mods {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mods li { min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.mods code { display: block; color: var(--fg); font-size: 0.88rem; font-weight: 600; overflow-wrap: anywhere; }
+.mods span { display: block; margin-top: 2px; color: var(--muted); font-size: 0.88rem; }
+.link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-block: 10px;
+  color: var(--muted);
+  font: 500 0.82rem/1.45 var(--font-mono);
+  text-align: center;
+}
+.link::before, .link::after { content: ""; width: 1px; height: 14px; background: var(--muted); }
+.link code { color: var(--fg); font-size: inherit; }
+
+.codebase { display: grid; gap: 32px; margin-top: clamp(56px, 7vw, 88px); }
+@media (min-width: 900px) { .codebase { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 56px; align-items: start; } }
+.codebase-main, .codebase-side { min-width: 0; }
+.codebase-main > p, .codebase-side > p { margin: 14px 0 0; color: var(--muted); font-size: 0.97rem; }
+.codebar { display: flex; gap: 2px; height: 22px; margin-top: 20px; overflow: hidden; border-radius: 6px; }
+.codebar span { flex: var(--n) 1 0%; background: var(--c); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 14px 0 0; padding: 0; list-style: none; font-size: 0.95rem; }
+.legend li { display: inline-flex; align-items: center; gap: 8px; }
+.legend li::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.legend b { font-variant-numeric: tabular-nums; }
+.stack { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
+.stack li { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font: 500 0.85rem/1 var(--font-mono); }
+
+/* Build */
+.build { display: grid; gap: 36px; }
+@media (min-width: 900px) { .build { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: start; } }
+.build-text, .build-steps { min-width: 0; }
+.build-text p { margin: 18px 0 0; color: var(--muted); font-size: 1.1rem; }
+.code { overflow: hidden; border-radius: 14px; background: var(--code-bg); color: var(--code-fg); box-shadow: var(--shadow); }
+.code-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--code-line);
+  color: var(--code-muted);
+  font: 500 0.8rem/1 var(--font-mono);
+}
+.copy {
+  appearance: none;
+  padding: 6px 10px;
+  border: 1px solid var(--code-line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--code-fg);
+  font: 600 0.78rem/1 var(--font-mono);
+  cursor: pointer;
+}
+.copy:hover { background: var(--code-line); }
+.code pre { margin: 0; padding: 18px 20px; overflow-x: auto; font: 500 0.92rem/1.75 var(--font-mono); }
+.code pre code { font-size: inherit; }
+.build-steps > p { margin: 20px 0 0; }
+.build-steps .aside { padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.97rem; }
+.label { display: block; margin-bottom: 4px; color: var(--fg); font: 600 0.76rem/1.4 var(--font-mono); letter-spacing: 0.07em; text-transform: uppercase; }
+
+/* Footer */
+.footer { padding-block: 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; }
+.footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px 32px; }
+.footer p { margin: 0; max-width: 44em; }
+.footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  .btn, .gh, .copy, .lang button, .nav-links a { transition: background-color 0.15s, color 0.15s, border-color 0.15s; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main"><span lang="en">Skip to content</span><span lang="pl">Przejdź do treści</span></a>
+
+<header class="band" id="top">
+  <div class="wrap nav">
+    <a class="brand" href="#top"><img src="media/icon.png" alt="" width="32" height="32">Storagelyzer</a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#features"><span lang="en">Features</span><span lang="pl">Funkcje</span></a>
+      <a href="#engineering"><span lang="en">Under the hood</span><span lang="pl">Pod maską</span></a>
+      <a href="#build"><span lang="en">Build</span><span lang="pl">Instalacja</span></a>
+    </nav>
+    <div class="nav-tools">
+      <a class="gh" href="https://github.com/wojtekbakun/storagelyzer">GitHub</a>
+      <div class="lang" role="group" aria-label="Language / Język">
+        <button type="button" id="lang-en" data-set-lang="en" aria-pressed="true">EN</button>
+        <button type="button" id="lang-pl" data-set-lang="pl" aria-pressed="false">PL</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap hero">
+    <div>
+      <p class="eyebrow"><span lang="en">Disk usage analyzer for macOS</span><span lang="pl">Analizator zajętości dysku dla macOS</span></p>
+      <h1><span lang="en">See what fills your Mac's disk.</span><span lang="pl">Zobacz, co zajmuje miejsce na Twoim Macu.</span></h1>
+      <p class="lead" lang="en">Storagelyzer draws your disk as rings you can explore, grows the picture live while it scans, and helps you free up space without risky deletes.</p>
+      <p class="lead" lang="pl">Storagelyzer rysuje dysk jako pierścienie, po których można się poruszać, rozbudowuje obraz na żywo w trakcie skanowania i pomaga zwolnić miejsce bez ryzykownego kasowania.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="https://github.com/wojtekbakun/storagelyzer"><span lang="en">Source on GitHub</span><span lang="pl">Kod na GitHubie</span></a>
+        <a class="btn btn-ghost" href="#build"><span lang="en">Build it yourself</span><span lang="pl">Zbuduj u siebie</span></a>
+      </div>
+    </div>
+    <dl class="spec">
+      <div><dt><span lang="en">Platform</span><span lang="pl">System</span></dt><dd>macOS 11+</dd></div>
+      <div><dt><span lang="en">Built with</span><span lang="pl">Technologie</span></dt><dd>Rust · Tauri 2 · React · TypeScript</dd></div>
+      <div><dt><span lang="en">App size</span><span lang="pl">Rozmiar</span></dt><dd>≈ 5 MB</dd></div>
+      <div><dt><span lang="en">Languages</span><span lang="pl">Języki</span></dt><dd><span lang="en">English, Polish</span><span lang="pl">polski, angielski</span></dd></div>
+      <div><dt><span lang="en">License</span><span lang="pl">Licencja</span></dt><dd>MIT</dd></div>
+    </dl>
+  </div>
+</header>
+
+<div class="shot-band">
+  <div class="wrap">
+    <img src="media/main-dark.png" width="2704" height="1824" fetchpriority="high"
+      alt="The Storagelyzer window: a folder list beside a sunburst chart of the whole disk, with labels pointing to the biggest folders in the user's home folder"
+      data-alt-pl="Okno Storagelyzera: lista folderów obok wykresu pierścieniowego całego dysku, z etykietami wskazującymi największe foldery w folderze domowym użytkownika">
+  </div>
+</div>
+
+<main id="main">
+  <section class="section" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="kicker"><span lang="en">Features</span><span lang="pl">Funkcje</span></p>
+        <h2><span lang="en">What you can do with it</span><span lang="pl">Co można z nim zrobić</span></h2>
+        <p><span lang="en">The recordings use generated demo data. Everything else is the real interface.</span><span lang="pl">Nagrania korzystają z wygenerowanych danych demo. Cała reszta to prawdziwy interfejs.</span></p>
+      </div>
+
+      <div class="features">
+        <article class="feature" style="--c: var(--seg-blue)">
+          <div class="feature-text">
+            <h3><span lang="en">Watch the scan happen</span><span lang="pl">Skan na żywo</span></h3>
+            <p lang="en">Pick a disk or a folder and the rings sweep in straight away. As the scanner finds more, the chart grows smoothly: segments slide into place instead of jumping between updates, and folders that are still being read pulse softly.</p>
+            <p lang="pl">Wybierz dysk albo folder, a pierścienie pojawią się od razu. W miarę jak skaner znajduje kolejne pliki, wykres płynnie rośnie: segmenty przesuwają się na swoje miejsce zamiast przeskakiwać, a foldery, które są jeszcze czytane, delikatnie pulsują.</p>
+            <ul class="pills">
+              <li class="pill"><span lang="en">A whole Mac in seconds</span><span lang="pl">Cały Mac w kilka sekund</span></li>
+              <li class="pill"><span lang="en">Sizes match du</span><span lang="pl">Rozmiary zgodne z du</span></li>
+              <li class="pill"><span lang="en">iCloud files stay in the cloud</span><span lang="pl">Pliki z iCloud zostają w chmurze</span></li>
+            </ul>
+          </div>
+          <figure class="media">
+            <div class="frame">
+              <video data-auto muted loop playsinline preload="none" controls width="1000" height="644" poster="media/web/scan.jpg"
+                aria-label="Recording: a scan of Macintosh HD, where the sunburst sweeps in and grows"
+                data-label-pl="Nagranie: skan Macintosh HD, w którym wykres pojawia się i rośnie">
+                <source src="media/web/scan.mp4" type="video/mp4">
+              </video>
+              <button class="play" type="button" hidden aria-label="Play recording">
+                <svg class="i-pause" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/></svg>
+                <svg class="i-play" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 2.9v10.2a.8.8 0 0 0 1.2.7l8-5.1a.8.8 0 0 0 0-1.4l-8-5.1A.8.8 0 0 0 5 2.9z" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </figure>
+        </article>
+
+        <article class="feature" style="--c: var(--seg-violet)">
+          <div class="feature-text">
+            <h3><span lang="en">Point at a folder to see inside it</span><span lang="pl">Najedź na folder, żeby zajrzeć do środka</span></h3>
+            <p lang="en">Hover a ring and lines lead to the biggest items inside it, each labelled with its name and size. The labels line up on both sides of the chart without overlapping. Click to zoom in, click the centre to go back up.</p>
+            <p lang="pl">Najedź na pierścień, a linie wskażą największe elementy w środku, każdy z nazwą i rozmiarem. Etykiety ustawiają się po obu stronach koła i nie nachodzą na siebie. Kliknij, żeby przybliżyć, kliknij środek, żeby wrócić wyżej.</p>
+            <ul class="pills">
+              <li class="pill"><span lang="en">Up to 10 labels</span><span lang="pl">Do 10 etykiet</span></li>
+              <li class="pill"><span lang="en">Lines never cross</span><span lang="pl">Linie się nie krzyżują</span></li>
+              <li class="pill"><span lang="en">Animated zoom</span><span lang="pl">Animowane przybliżanie</span></li>
+            </ul>
+          </div>
+          <figure class="media">
+            <div class="frame">
+              <video data-auto muted loop playsinline preload="none" controls width="1000" height="644" poster="media/web/explore.jpg"
+                aria-label="Recording: hovering folders shows labelled lines to their biggest items, then the chart zooms in and out"
+                data-label-pl="Nagranie: najechanie na foldery pokazuje linie z etykietami do największych elementów, potem wykres się przybliża i oddala">
+                <source src="media/web/explore.mp4" type="video/mp4">
+              </video>
+              <button class="play" type="button" hidden aria-label="Play recording">
+                <svg class="i-pause" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/></svg>
+                <svg class="i-play" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 2.9v10.2a.8.8 0 0 0 1.2.7l8-5.1a.8.8 0 0 0 0-1.4l-8-5.1A.8.8 0 0 0 5 2.9z" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </figure>
+        </article>
+
+        <article class="feature" style="--c: var(--seg-mint)">
+          <div class="feature-text">
+            <h3><span lang="en">A list that follows the chart</span><span lang="pl">Lista, która idzie za wykresem</span></h3>
+            <p lang="en">Beside the chart sits a folder tree sorted by size, with share, item count and last change. Hover a row and its segment lights up; Enter opens it in the chart and ⌘↑ goes back. It stays smooth with hundreds of thousands of rows.</p>
+            <p lang="pl">Obok wykresu jest drzewo folderów posortowane od największych, z udziałem, liczbą elementów i datą zmiany. Najedź na wiersz, a jego segment się podświetli; Enter otwiera go na wykresie, a ⌘↑ wraca wyżej. Działa płynnie nawet przy setkach tysięcy wierszy.</p>
+            <ul class="pills">
+              <li class="pill"><span lang="en">Space for Quick Look</span><span lang="pl">Spacja: Quick Look</span></li>
+              <li class="pill"><span lang="en">⌘⌫ moves to Trash</span><span lang="pl">⌘⌫ przenosi do Kosza</span></li>
+              <li class="pill"><span lang="en">Show in Finder</span><span lang="pl">Pokaż w Finderze</span></li>
+            </ul>
+          </div>
+          <figure class="media">
+            <div class="frame">
+              <video data-auto muted loop playsinline preload="none" controls width="1000" height="644" poster="media/web/tree.jpg"
+                aria-label="Recording: hovering rows in the folder list highlights their segments in the chart"
+                data-label-pl="Nagranie: najechanie na wiersze listy podświetla ich segmenty na wykresie">
+                <source src="media/web/tree.mp4" type="video/mp4">
+              </video>
+              <button class="play" type="button" hidden aria-label="Play recording">
+                <svg class="i-pause" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/></svg>
+                <svg class="i-play" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 2.9v10.2a.8.8 0 0 0 1.2.7l8-5.1a.8.8 0 0 0 0-1.4l-8-5.1A.8.8 0 0 0 5 2.9z" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </figure>
+        </article>
+
+        <article class="feature" style="--c: var(--seg-amber)">
+          <div class="feature-text">
+            <h3><span lang="en">Sizes you can trust</span><span lang="pl">Rozmiary, którym można ufać</span></h3>
+            <p lang="en">“On disk” counts the blocks a file really takes, like du. “Size” is the length Finder shows. When the two differ wildly, say a 1&nbsp;TB Docker disk image that takes 20&nbsp;GB, the app lists the files behind the gap: sparse files, files kept only in iCloud and compressed files.</p>
+            <p lang="pl">„Na dysku” liczy bloki, które plik naprawdę zajmuje, jak du. „Rozmiar” to długość, którą pokazuje Finder. Gdy te liczby bardzo się różnią, np. obraz dysku Dockera ma 1&nbsp;TB, a zajmuje 20&nbsp;GB, aplikacja wymienia pliki, które za tym stoją: rzadkie, trzymane tylko w iCloud i skompresowane.</p>
+            <ul class="pills">
+              <li class="pill"><span lang="en">Hard links count once</span><span lang="pl">Twarde dowiązania liczone raz</span></li>
+              <li class="pill"><span lang="en">Switching morphs the chart</span><span lang="pl">Przełączenie przekształca wykres</span></li>
+            </ul>
+          </div>
+          <figure class="media">
+            <div class="frame">
+              <video data-auto muted loop playsinline preload="none" controls width="1000" height="644" poster="media/web/size.jpg"
+                aria-label="Recording: switching from On disk to Size, then the window that explains the difference"
+                data-label-pl="Nagranie: przełączenie z Na dysku na Rozmiar i okno, które wyjaśnia różnicę">
+                <source src="media/web/size.mp4" type="video/mp4">
+              </video>
+              <button class="play" type="button" hidden aria-label="Play recording">
+                <svg class="i-pause" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/></svg>
+                <svg class="i-play" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 2.9v10.2a.8.8 0 0 0 1.2.7l8-5.1a.8.8 0 0 0 0-1.4l-8-5.1A.8.8 0 0 0 5 2.9z" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </figure>
+        </article>
+
+        <article class="feature" style="--c: var(--seg-coral)">
+          <div class="feature-text">
+            <h3><span lang="en">Free up space, safely</span><span lang="pl">Bezpieczne zwalnianie miejsca</span></h3>
+            <p lang="en">The clean-up assistant measures what hides behind macOS “System Data”: app caches, logs, Xcode and simulator data, developer tool caches, old iPhone backups, installers and Time Machine snapshots. It also ranks your apps by size with when you last opened them, and finds data left behind by apps you have uninstalled.</p>
+            <p lang="pl">Asystent sprzątania mierzy, co kryje się za „Danymi systemowymi” w macOS: pamięć podręczną aplikacji, logi, dane Xcode i symulatorów, cache narzędzi deweloperskich, stare kopie iPhone'a, instalatory i lokalne migawki Time Machine. Pokazuje też aplikacje według rozmiaru z datą ostatniego otwarcia i znajduje dane, które zostały po odinstalowanych programach.</p>
+            <ul class="pills">
+              <li class="pill"><span lang="en">Everything goes to the Trash first</span><span lang="pl">Wszystko najpierw trafia do Kosza</span></li>
+              <li class="pill"><span lang="en">No hard-coded app list</span><span lang="pl">Bez listy aplikacji na sztywno</span></li>
+            </ul>
+          </div>
+          <figure class="media">
+            <div class="frame">
+              <video data-auto muted loop playsinline preload="none" controls width="1000" height="644" poster="media/web/cleanup.jpg"
+                aria-label="Recording: the Free up space assistant measures categories and lists apps and leftovers"
+                data-label-pl="Nagranie: asystent Zwolnij miejsce mierzy kategorie i pokazuje aplikacje oraz pozostałości">
+                <source src="media/web/cleanup.mp4" type="video/mp4">
+              </video>
+              <button class="play" type="button" hidden aria-label="Play recording">
+                <svg class="i-pause" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="1" fill="currentColor"/></svg>
+                <svg class="i-play" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 2.9v10.2a.8.8 0 0 0 1.2.7l8-5.1a.8.8 0 0 0 0-1.4l-8-5.1A.8.8 0 0 0 5 2.9z" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </figure>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="details" aria-labelledby="details-title">
+    <div class="wrap mac">
+      <div class="mac-text">
+        <p class="kicker"><span lang="en">Details</span><span lang="pl">Szczegóły</span></p>
+        <h2 id="details-title"><span lang="en">Made for macOS</span><span lang="pl">Zrobiony dla macOS</span></h2>
+        <p lang="en">The whole app is about 5&nbsp;MB. Tauri uses the WebKit built into macOS instead of bundling a browser; Electron apps typically weigh 150–600&nbsp;MB.</p>
+        <p lang="pl">Cała aplikacja waży około 5&nbsp;MB. Tauri korzysta z WebKitu wbudowanego w macOS, zamiast dołączać własną przeglądarkę; aplikacje w Electronie ważą zwykle 150–600&nbsp;MB.</p>
+        <ul class="traits">
+          <li><b><span lang="en">Light and dark mode</span><span lang="pl">Jasny i ciemny motyw</span></b><p><span lang="en">Follows the system appearance.</span><span lang="pl">Zgodnie z ustawieniem systemu.</span></p></li>
+          <li><b><span lang="en">Finder and Quick Look</span><span lang="pl">Finder i Quick Look</span></b><p><span lang="en">Reveal in Finder, preview with Space.</span><span lang="pl">Pokaż w Finderze, podgląd Spacją.</span></p></li>
+          <li><b><span lang="en">Keyboard first</span><span lang="pl">Obsługa z klawiatury</span></b><p><span lang="en">Arrow keys, Enter, ⌘↑ and ⌘⌫.</span><span lang="pl">Strzałki, Enter, ⌘↑ i ⌘⌫.</span></p></li>
+          <li><b><span lang="en">English and Polish</span><span lang="pl">Polski i angielski</span></b><p><span lang="en">Picks your system language.</span><span lang="pl">Według języka systemu.</span></p></li>
+          <li><b><span lang="en">Drag and drop</span><span lang="pl">Przeciągnij i upuść</span></b><p><span lang="en">Drop a folder on the window to scan it.</span><span lang="pl">Upuść folder na okno, żeby go zeskanować.</span></p></li>
+          <li><b><span lang="en">Open about gaps</span><span lang="pl">Otwarcie o brakach</span></b><p><span lang="en">Lists folders it could not read and space the scan cannot see, such as snapshots.</span><span lang="pl">Pokazuje foldery bez dostępu i miejsce, którego skan nie widzi, np. migawki.</span></p></li>
+        </ul>
+      </div>
+      <figure class="mac-shot">
+        <img src="media/main-light.png" width="2704" height="1824" loading="lazy"
+          alt="Storagelyzer in light mode, with the same folder list and sunburst chart"
+          data-alt-pl="Storagelyzer w jasnym motywie, z tą samą listą folderów i wykresem pierścieniowym">
+      </figure>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="engineering">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="kicker"><span lang="en">Under the hood</span><span lang="pl">Pod maską</span></p>
+        <h2><span lang="en">A scanner tuned for APFS</span><span lang="pl">Skaner dostrojony do APFS</span></h2>
+        <p lang="en">A disk analyzer is only as good as its scanner. Storagelyzer's is written in Rust around how APFS actually behaves, and the interface is React and TypeScript, drawn on a canvas in the system WebView.</p>
+        <p lang="pl">Analizator dysku jest tak dobry, jak jego skaner. Ten w Storagelyzerze jest napisany w Ruście pod to, jak naprawdę zachowuje się APFS, a interfejs to React i TypeScript, rysowany na canvasie w systemowym WebView.</p>
+      </div>
+
+      <div class="bench">
+        <p class="bench-stat"><strong>6.5×</strong><span><span lang="en">faster than <code>du</code></span><span lang="pl">szybciej niż <code>du</code></span></span></p>
+        <figure class="bench-chart">
+          <figcaption><span lang="en">Reading /Applications, 410,000 items</span><span lang="pl">Odczyt /Applications, 410 tys. elementów</span></figcaption>
+          <div class="bench-row">
+            <span class="bench-name">Storagelyzer</span>
+            <span class="bench-track"><span class="bench-bar is-us" style="--v: 0.1528"></span></span>
+            <span class="bench-val"><span lang="en">0.55 s</span><span lang="pl">0,55 s</span></span>
+          </div>
+          <div class="bench-row">
+            <span class="bench-name"><code>du</code></span>
+            <span class="bench-track"><span class="bench-bar" style="--v: 1"></span></span>
+            <span class="bench-val"><span lang="en">3.6 s</span><span lang="pl">3,6 s</span></span>
+          </div>
+          <p class="bench-note"><span lang="en">Measured on the author's Mac. Both report the same total, to the byte.</span><span lang="pl">Pomiar na Macu autora. Oba podają tę samą sumę, co do bajta.</span></p>
+        </figure>
+      </div>
+
+      <ul class="notes">
+        <li class="note">
+          <code class="note-tag">getattrlistbulk(2)</code>
+          <h3><span lang="en">Many files per system call</span><span lang="pl">Wiele plików na jedno wywołanie</span></h3>
+          <p lang="en">Instead of readdir plus lstat for every file, one call returns names, types, sizes, inodes and mount status for a whole batch of entries.</p>
+          <p lang="pl">Zamiast readdir i lstat dla każdego pliku jedno wywołanie zwraca nazwy, typy, rozmiary, i-węzły i status montowania dla całej paczki wpisów.</p>
+        </li>
+        <li class="note">
+          <code class="note-tag">STORAGELYZER_THREADS=4</code>
+          <h3><span lang="en">Four threads is the sweet spot</span><span lang="pl">Cztery wątki to optimum</span></h3>
+          <p lang="en">APFS does not list directories faster with more threads: sixteen were 2–5× slower than four, even with no locking in the app. Four is the default.</p>
+          <p lang="pl">APFS nie listuje katalogów szybciej przy większej liczbie wątków: szesnaście było 2–5× wolniejsze niż cztery, nawet bez żadnych blokad w aplikacji. Domyślnie są cztery.</p>
+        </li>
+        <li class="note">
+          <code class="note-tag">/usr/share/firmlinks</code>
+          <h3><span lang="en">Nothing counted twice</span><span lang="pl">Nic nie liczy się podwójnie</span></h3>
+          <p lang="en">Since Catalina, /Users and /Applications are firmlinks into the Data volume. Directories are deduplicated by device and inode, volumes from the same container are scanned in a second pass, and hard links count once.</p>
+          <p lang="pl">Od Cataliny /Users i /Applications to firmlinki do woluminu Data. Katalogi są deduplikowane po urządzeniu i i-węźle, woluminy z tego samego kontenera skanowane w drugim przebiegu, a twarde dowiązania liczone raz.</p>
+        </li>
+        <li class="note">
+          <code class="note-tag">IOPOL_TYPE_VFS_MATERIALIZE_DATALESS_FILES</code>
+          <h3><span lang="en">Never downloads from iCloud</span><span lang="pl">Nic nie ściąga z iCloud</span></h3>
+          <p lang="en">Scanner threads turn off file materialization, so cloud-only files count at their local size and nothing is fetched. Access times stay untouched, and other disks and network shares are skipped.</p>
+          <p lang="pl">Wątki skanera mają wyłączone pobieranie plików, więc pliki tylko w chmurze liczą się z lokalnym rozmiarem i nic nie jest ściągane. Czasy dostępu zostają nietknięte, a inne dyski i udziały sieciowe są pomijane.</p>
+        </li>
+        <li class="note">
+          <code class="note-tag">≈ 48 B / node</code>
+          <h3><span lang="en">The file tree stays in Rust</span><span lang="pl">Drzewo plików zostaje w Ruście</span></h3>
+          <p lang="en">Nodes live in a compact arena, about 48 bytes each plus the name, so two million files take about 140&nbsp;MB. The interface gets only what it shows: a pruned subtree for the chart and pages of rows for the list.</p>
+          <p lang="pl">Węzły siedzą w zwartej arenie, ok. 48 bajtów na każdy plus nazwa, więc dwa miliony plików to ok. 140&nbsp;MB. Interfejs dostaje tylko to, co pokazuje: przycięte poddrzewo do wykresu i strony wierszy dla listy.</p>
+        </li>
+        <li class="note">
+          <code class="note-tag">buildMorph()</code>
+          <h3><span lang="en">Updates that morph</span><span lang="pl">Aktualizacje, które się przekształcają</span></h3>
+          <p lang="en">Every progress update blends into the next: segments matched by id grow and slide, new ones emerge inside their parent, and removed ones shrink and fade. The hover labels glide along.</p>
+          <p lang="pl">Każda aktualizacja postępu płynnie przechodzi w następną: segmenty dopasowane po id rosną i przesuwają się, nowe wyłaniają się w obrębie rodzica, a znikające zwijają się i gasną. Etykiety płyną razem z nimi.</p>
+        </li>
+      </ul>
+
+      <figure class="arch" aria-labelledby="arch-title">
+        <h3 id="arch-title"><span lang="en">How it fits together</span><span lang="pl">Jak to jest poskładane</span></h3>
+        <div class="layer">
+          <div class="layer-head"><span class="layer-name">WebView</span><span class="layer-tech">React 19 · TypeScript · Canvas 2D</span></div>
+          <ul class="mods">
+            <li><code>StartScreen</code><span lang="en">home folder and disks</span><span lang="pl">folder domowy i dyski</span></li>
+            <li><code>ScanView</code><span lang="en">toolbar, list and chart</span><span lang="pl">pasek, lista i wykres</span></li>
+            <li><code>TreeList</code><span lang="en">virtualized folder tree</span><span lang="pl">wirtualizowane drzewo folderów</span></li>
+            <li><code>RingChart</code><span lang="en">sunburst, morphing, labels</span><span lang="pl">sunburst, przejścia, etykiety</span></li>
+          </ul>
+        </div>
+        <div class="link"><span><code>invoke()</code> · <code>Channel</code></span><span><span lang="en">progress every 150 ms</span><span lang="pl">postęp co 150 ms</span></span></div>
+        <div class="layer">
+          <div class="layer-head"><span class="layer-name">Rust</span><span class="layer-tech">Tauri 2 · rayon · libc</span></div>
+          <ul class="mods">
+            <li><code>commands.rs</code><span>start_scan, get_rings, get_children</span></li>
+            <li><code>scan/</code><span lang="en">parallel scanner on getattrlistbulk</span><span lang="pl">równoległy skaner na getattrlistbulk</span></li>
+            <li><code>tree.rs</code><span lang="en">node arena, sizes roll up live</span><span lang="pl">arena węzłów, rozmiary liczone na bieżąco</span></li>
+            <li><code>volumes.rs</code><span lang="en">disks and APFS containers</span><span lang="pl">dyski i kontenery APFS</span></li>
+            <li><code>cleanup.rs</code><span lang="en">Free up space rules</span><span lang="pl">reguły „Zwolnij miejsce”</span></li>
+            <li><code>apps.rs</code><span lang="en">LaunchServices and Spotlight</span><span lang="pl">LaunchServices i Spotlight</span></li>
+            <li><code>macos.rs</code><span lang="en">Full Disk Access, Finder, Trash</span><span lang="pl">Pełny dostęp do dysku, Finder, Kosz</span></li>
+          </ul>
+        </div>
+      </figure>
+
+      <div class="codebase">
+        <div class="codebase-main">
+          <h3><span lang="en">The codebase</span><span lang="pl">Kod</span></h3>
+          <p><span lang="en">Lines of code in the repository, drawn the way macOS draws storage.</span><span lang="pl">Linie kodu w repozytorium, narysowane tak, jak macOS rysuje zajęte miejsce.</span></p>
+          <div class="codebar" role="img" aria-label="Rust 3,756 lines, TypeScript 5,420 lines, CSS 1,886 lines" data-label-pl="Rust 3756 linii, TypeScript 5420 linii, CSS 1886 linii">
+            <span style="--n: 3756; --c: var(--seg-amber)"></span>
+            <span style="--n: 5420; --c: var(--seg-blue)"></span>
+            <span style="--n: 1886; --c: var(--seg-violet)"></span>
+          </div>
+          <ul class="legend">
+            <li style="--c: var(--seg-amber)">Rust <b><span lang="en">3,756</span><span lang="pl">3756</span></b></li>
+            <li style="--c: var(--seg-blue)">TypeScript <b><span lang="en">5,420</span><span lang="pl">5420</span></b></li>
+            <li style="--c: var(--seg-violet)">CSS <b><span lang="en">1,886</span><span lang="pl">1886</span></b></li>
+          </ul>
+        </div>
+        <div class="codebase-side">
+          <ul class="stack">
+            <li>Rust 2024</li>
+            <li>Tauri 2</li>
+            <li>React 19</li>
+            <li>TypeScript 6</li>
+            <li>Vite 8</li>
+            <li>rayon</li>
+            <li>Canvas 2D</li>
+          </ul>
+          <p lang="en"><code>cargo test</code> covers the tree model, the scanner, volumes and the clean-up rules.</p>
+          <p lang="pl"><code>cargo test</code> obejmuje model drzewa, skaner, woluminy i reguły sprzątania.</p>
+          <p lang="en">Every screenshot and recording on this page is made by a script: headless Chrome drives the interface on demo data, and ffmpeg encodes the result.</p>
+          <p lang="pl">Każdy zrzut i nagranie na tej stronie robi skrypt: headless Chrome steruje interfejsem na danych demo, a ffmpeg koduje wynik.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="build">
+    <div class="wrap build">
+      <div class="build-text">
+        <p class="kicker"><span lang="en">Build</span><span lang="pl">Instalacja</span></p>
+        <h2><span lang="en">Build it yourself</span><span lang="pl">Zbuduj u siebie</span></h2>
+        <p lang="en">There is no signed download yet, so the app is built from source. You need macOS 11 or later, Rust, Node.js 20+ and the Xcode Command Line Tools.</p>
+        <p lang="pl">Nie ma jeszcze podpisanej wersji do pobrania, więc aplikację buduje się ze źródeł. Potrzebujesz macOS 11 lub nowszego, Rusta, Node.js 20+ i Xcode Command Line Tools.</p>
+      </div>
+      <div class="build-steps">
+        <div class="code">
+          <div class="code-head"><span>Terminal</span><button class="copy" type="button" id="copy-build" data-copy="build-cmds">Copy</button></div>
+          <pre id="build-cmds"><code>git clone https://github.com/wojtekbakun/storagelyzer.git
+cd storagelyzer
+npm install
+npm run install-app</code></pre>
+        </div>
+        <p lang="en">The last command builds Storagelyzer.app and moves it to /Applications. Then give it Full Disk Access in System Settings → Privacy &amp; Security → Full Disk Access. Without it, macOS hides Mail, Messages, Safari and other apps' data, so totals come out too low; the app tells you when that happens.</p>
+        <p lang="pl">Ostatnie polecenie buduje Storagelyzer.app i przenosi go do /Applications. Potem nadaj mu Pełny dostęp do dysku w Ustawieniach systemowych → Prywatność i ochrona → Pełny dostęp do dysku. Bez tego macOS ukrywa dane Poczty, Wiadomości, Safari i innych aplikacji, więc sumy wychodzą za niskie; aplikacja daje znać, gdy tak się dzieje.</p>
+        <p class="aside" lang="en"><span class="label">Note</span>Builds are ad-hoc signed, so macOS ties Full Disk Access to one exact build. After installing a new one, switch the permission off and on again.</p>
+        <p class="aside" lang="pl"><span class="label">Uwaga</span>Kompilacje są podpisane ad-hoc, więc macOS wiąże Pełny dostęp do dysku z jedną konkretną kompilacją. Po zainstalowaniu nowej wyłącz i włącz uprawnienie ponownie.</p>
+        <p class="aside" lang="en"><span class="label">Just looking?</span><code>npm run dev</code> opens the interface in a browser on generated demo data, no Rust needed.</p>
+        <p class="aside" lang="pl"><span class="label">Tylko popatrzeć?</span><code>npm run dev</code> otwiera interfejs w przeglądarce na wygenerowanych danych demo, bez Rusta.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p lang="en">Storagelyzer is a project by Wojciech Bakun, released under the MIT license. Inspired by GNOME's Disk Usage Analyzer.</p>
+    <p lang="pl">Storagelyzer to projekt Wojciecha Bakuna, udostępniony na licencji MIT. Inspiracja: Disk Usage Analyzer (Baobab) z GNOME.</p>
+    <nav aria-label="Links">
+      <a href="https://github.com/wojtekbakun/storagelyzer"><span lang="en">Repository</span><span lang="pl">Repozytorium</span></a>
+      <a href="https://github.com/wojtekbakun">github.com/wojtekbakun</a>
+      <a href="https://wojtekbakun.pl">wojtekbakun.pl</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const KEY = "storagelyzer-site-lang";
+  const T = {
+    en: { pause: "Pause recording", play: "Play recording", copy: "Copy", copied: "Copied", selected: "Selected" },
+    pl: { pause: "Wstrzymaj nagranie", play: "Odtwórz nagranie", copy: "Kopiuj", copied: "Skopiowano", selected: "Zaznaczono" },
+  };
+  let lang = "en";
+
+  const videos = Array.from(document.querySelectorAll("video[data-auto]"));
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  function syncButton(v) {
+    const b = v.parentElement.querySelector(".play");
+    if (!b) return;
+    const playing = !v.paused;
+    b.dataset.state = playing ? "playing" : "paused";
+    b.setAttribute("aria-label", playing ? T[lang].pause : T[lang].play);
+  }
+
+  function setLang(next, remember) {
+    lang = next === "pl" ? "pl" : "en";
+    root.dataset.lang = lang;
+    root.lang = lang;
+    document.querySelectorAll("[data-alt-pl]").forEach((el) => {
+      if (el.dataset.altEn === undefined) el.dataset.altEn = el.getAttribute("alt") || "";
+      el.setAttribute("alt", lang === "pl" ? el.dataset.altPl : el.dataset.altEn);
+    });
+    document.querySelectorAll("[data-label-pl]").forEach((el) => {
+      if (el.dataset.labelEn === undefined) el.dataset.labelEn = el.getAttribute("aria-label") || "";
+      el.setAttribute("aria-label", lang === "pl" ? el.dataset.labelPl : el.dataset.labelEn);
+    });
+    document.querySelectorAll("[data-set-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setLang === lang)));
+    document.querySelectorAll(".copy").forEach((b) => { b.textContent = T[lang].copy; });
+    videos.forEach(syncButton);
+    if (remember) {
+      try { localStorage.setItem(KEY, lang); } catch (e) { /* storage blocked: the choice lasts until reload */ }
+    }
+  }
+
+  document.querySelectorAll("[data-set-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.setLang, true)));
+  let saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) { saved = null; }
+  const browser = ((navigator.languages && navigator.languages[0]) || navigator.language || "").toLowerCase();
+  setLang(saved || (browser.startsWith("pl") ? "pl" : "en"), false);
+
+  // Recordings play while on screen, never on their own with Reduce Motion, and can always be paused.
+  videos.forEach((v) => {
+    const b = v.parentElement.querySelector(".play");
+    v.removeAttribute("controls");
+    b.hidden = false;
+    b.addEventListener("click", () => {
+      if (v.paused) {
+        v.dataset.user = "play";
+        v.play().catch(() => {});
+      } else {
+        v.dataset.user = "pause";
+        v.pause();
+      }
+    });
+    v.addEventListener("play", () => syncButton(v));
+    v.addEventListener("pause", () => syncButton(v));
+    syncButton(v);
+  });
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(({ target: v, isIntersecting }) => {
+        if (isIntersecting) {
+          if (!reduce.matches && v.dataset.user !== "pause") v.play().catch(() => {});
+        } else if (!v.paused) {
+          v.pause();
+        }
+      });
+    }, { threshold: 0.4 });
+    videos.forEach((v) => io.observe(v));
+  }
+  if (reduce.addEventListener) {
+    reduce.addEventListener("change", () => { if (reduce.matches) videos.forEach((v) => v.pause()); });
+  }
+
+  // Copy buttons: clipboard when allowed, otherwise select the text.
+  document.querySelectorAll(".copy").forEach((b) => {
+    b.addEventListener("click", () => {
+      const pre = document.getElementById(b.dataset.copy);
+      const flash = (label) => {
+        b.textContent = label;
+        clearTimeout(b.resetTimer);
+        b.resetTimer = setTimeout(() => { b.textContent = T[lang].copy; }, 2000);
+      };
+      const select = () => {
+        const range = document.createRange();
+        range.selectNodeContents(pre);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        flash(T[lang].selected);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(pre.textContent.trim()).then(() => flash(T[lang].copied), select);
+      } else {
+        select();
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
