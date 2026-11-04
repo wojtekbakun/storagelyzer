@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>pl</string>
+	</array>
+	<key>CFBundleAllowMixedLocalizations</key>
+	<true/>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Storagelyzer measures how much space the files on your Desktop take up. Nothing is uploaded or changed.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Storagelyzer measures how much space your Documents take up. Nothing is uploaded or changed.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Storagelyzer measures how much space your Downloads take up. Nothing is uploaded or changed.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>Storagelyzer measures how much space is used on removable drives you choose to scan.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>Storagelyzer measures how much space is used on network volumes you choose to scan.</string>
+</dict>
+</plist>
