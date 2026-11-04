@@ -22,6 +22,7 @@ import {
   type Segment,
   type View,
 } from "../ring/layout";
+import { newCalloutState, paintCallouts, resetCallouts, type CalloutStyle, type Kid } from "../ring/callouts";
 
 export interface RingChartHandle {
   /** Animates the view into the segment of node `id` (if visible). */
@@ -43,6 +44,8 @@ interface Props {
   renderTooltip(seg: Segment): ReactNode;
   center: ReactNode;
   canGoUp: boolean;
+  /** Height kept free at the bottom of the pane (a note under the chart): labels stay above it. */
+  bottomInset?: number;
 }
 
 /** Zoom in/out. */
@@ -50,18 +53,30 @@ const DURATION = 430;
 /** First appearance: the rings sweep in clockwise. */
 const REVEAL_MS = 750;
 
-function readPalette(el: HTMLElement): Palette {
+type ChartPalette = Palette & { callout: CalloutStyle };
+
+function readPalette(el: HTMLElement): ChartPalette {
   const st = getComputedStyle(el);
   const dark = st.getPropertyValue("--is-dark").trim() === "1";
   const parse = (v: string, fallback: [number, number, number]) => {
     const m = v.match(/\d+(\.\d+)?/g);
     return m && m.length >= 3 ? ([+m[0], +m[1], +m[2]] as [number, number, number]) : fallback;
   };
+  const v = (name: string, light: string, darkValue: string) => st.getPropertyValue(name).trim() || (dark ? darkValue : light);
   return {
     dark,
     center: parse(st.getPropertyValue("--chart-center"), dark ? [44, 45, 49] : [246, 246, 248]),
-    separator: st.getPropertyValue("--chart-separator").trim() || (dark ? "#1e1f22" : "#ffffff"),
-    highlight: st.getPropertyValue("--chart-highlight").trim() || (dark ? "rgba(255,255,255,.85)" : "rgba(0,0,0,.45)"),
+    separator: v("--chart-separator", "#ffffff", "#1e1f22"),
+    highlight: v("--chart-highlight", "rgba(0,0,0,.45)", "rgba(255,255,255,.85)"),
+    callout: {
+      font: st.fontFamily || "-apple-system, BlinkMacSystemFont, sans-serif",
+      text: v("--text", "#1d1d1f", "#f5f5f7"),
+      text2: v("--text-2", "#6e6e73", "#a1a1a6"),
+      fill: v("--tip-bg", "rgba(255,255,255,.94)", "rgba(44,44,47,.95)"),
+      border: v("--line-strong", "rgba(0,0,0,.14)", "rgba(255,255,255,.15)"),
+      leader: v("--chart-leader", "rgba(0,0,0,.55)", "rgba(255,255,255,.72)"),
+      halo: v("--chart-halo", "rgba(251,251,252,.75)", "rgba(25,25,27,.7)"),
+    },
   };
 }
 
@@ -75,12 +90,15 @@ export const RingChart = forwardRef<RingChartHandle, Props>(function RingChart(p
   const viewRef = useRef<View>(IDENTITY);
   const geomRef = useRef<Geom | null>(null);
   const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
-  const paletteRef = useRef<Palette | null>(null);
+  const paletteRef = useRef<ChartPalette | null>(null);
   const animRef = useRef<{ raf: number; timer: ReturnType<typeof setTimeout>; cancel: () => void } | null>(null);
   const morphRef = useRef<Morph | null>(null);
   const revealRef = useRef<number | null>(null);
   const pendingRef = useRef(false);
   const tickRef = useRef(0);
+  /** Labels for what is inside the hovered folder; `busy` while they fade or glide. */
+  const calloutRef = useRef(newCalloutState());
+  const calloutBusyRef = useRef(false);
   const hoverRef = useRef<Segment | null>(null);
   const highlightRef = useRef<number | null>(highlightId);
   const propsRef = useRef(props);
@@ -120,9 +138,11 @@ export const RingChart = forwardRef<RingChartHandle, Props>(function RingChart(p
 
     // (Assigned inside `paint`; the cast keeps TS from narrowing it to `null`.)
     let outline = null as { a0: number; a1: number; inner: number; outer: number; full: boolean } | null;
+    /** Children of the hovered segment, where they are drawn this frame. */
+    const kids: Kid[] = [];
     ctx.lineJoin = "round";
 
-    const paint = (s: Segment, alpha: number) => {
+    const paint = (s: Segment, alpha: number, leaving = false) => {
       const ring = s.depth - view.d;
       if (ring <= -1 + 1e-6 || alpha <= 0.01) return;
       const inner = radius(ring, g);
@@ -180,11 +200,14 @@ export const RingChart = forwardRef<RingChartHandle, Props>(function RingChart(p
       }
       ctx.globalAlpha = 1;
       if ((isHover || isHighlight) && !isCenter && s.depth > 0) outline = { a0, a1, inner, outer, full };
+      if (!leaving && hover !== null && s.kind !== "other" && s.parent?.key === hover.key) {
+        kids.push({ key: s.key, name: s.name, size: s.size, a0, a1, inner, outer, color: css(segmentRGB(s, view, pal, false)) });
+      }
     };
 
     if (morph && m < 1) {
       for (const x of morph.exiting) {
-        paint({ ...x.seg, x0: lerp(x.from.x0, x.to.x0, m), x1: lerp(x.from.x1, x.to.x1, m) }, x.from.a * (1 - m));
+        paint({ ...x.seg, x0: lerp(x.from.x0, x.to.x0, m), x1: lerp(x.from.x1, x.to.x1, m) }, x.from.a * (1 - m), true);
       }
     }
     for (const s of lay.segments) {
@@ -211,6 +234,21 @@ export const RingChart = forwardRef<RingChartHandle, Props>(function RingChart(p
       ctx.lineWidth = 2;
       ctx.stroke();
     }
+
+    if (animRef.current) {
+      // Zooming: labels would not follow the moving rings.
+      resetCallouts(calloutRef.current);
+      calloutBusyRef.current = false;
+    } else {
+      calloutBusyRef.current = paintCallouts(ctx, calloutRef.current, hover?.key ?? null, kids, now, {
+        g,
+        width: w,
+        height: h,
+        style: pal.callout,
+        topLeft: propsRef.current.canGoUp ? 52 : 0,
+        bottom: propsRef.current.bottomInset ?? 0,
+      });
+    }
   }, []);
 
   /** Keeps drawing while a morph, the reveal or the "still scanning" pulse needs frames. */
@@ -221,7 +259,10 @@ export const RingChart = forwardRef<RingChartHandle, Props>(function RingChart(p
       // A zoom animation draws every frame by itself.
       if (!animRef.current) draw();
       const busy =
-        morphRef.current !== null || revealRef.current !== null || (propsRef.current.scanning && pendingRef.current);
+        morphRef.current !== null ||
+        revealRef.current !== null ||
+        calloutBusyRef.current ||
+        (propsRef.current.scanning && pendingRef.current);
       if (busy) tickRef.current = requestAnimationFrame(tick);
     };
     tickRef.current = requestAnimationFrame(tick);
@@ -339,6 +380,7 @@ export const RingChart = forwardRef<RingChartHandle, Props>(function RingChart(p
     const resetHover = () => {
       hoverRef.current = null;
       setHovered(null);
+      resetCallouts(calloutRef.current);
     };
     const keepHover = () => {
       const key = hoverRef.current?.key;
@@ -401,6 +443,7 @@ export const RingChart = forwardRef<RingChartHandle, Props>(function RingChart(p
         if (!lay || !seg || seg.depth === 0) return Promise.resolve();
         hoverRef.current = null;
         setHovered(null);
+        resetCallouts(calloutRef.current);
         return animate(viewRef.current, { x0: seg.x0, x1: seg.x1, d: seg.depth });
       },
     }),
@@ -447,6 +490,7 @@ export const RingChart = forwardRef<RingChartHandle, Props>(function RingChart(p
       setHovered(seg);
       propsRef.current.onHover(seg);
       draw();
+      kick();
     }
     moveTip(e);
   };
@@ -457,6 +501,7 @@ export const RingChart = forwardRef<RingChartHandle, Props>(function RingChart(p
       setHovered(null);
       propsRef.current.onHover(null);
       draw();
+      kick();
     }
   };
 

@@ -42,6 +42,8 @@
   --chart-center-css: #ececf0;
   --chart-separator: #fbfbfc;
   --chart-highlight: rgba(0, 0, 0, 0.5);
+  --chart-leader: rgba(0, 0, 0, 0.55);
+  --chart-halo: rgba(251, 251, 252, 0.75);
 
   color-scheme: light dark;
 }
@@ -87,6 +89,8 @@
     --chart-center-css: #2e2e33;
     --chart-separator: #19191b;
     --chart-highlight: rgba(255, 255, 255, 0.85);
+    --chart-leader: rgba(255, 255, 255, 0.72);
+    --chart-halo: rgba(25, 25, 27, 0.7);
   }
 }
 

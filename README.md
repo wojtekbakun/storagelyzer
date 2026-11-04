@@ -16,7 +16,7 @@
 
 ## Features
 
-- **Sunburst + tree.** Your disk as rings: hover to see a folder's size, click to dive in, click the centre to go back. The folder list stays in sync with the chart.
+- **Sunburst + tree.** Your disk as rings. Hover a folder and lines point to the biggest things inside it, with their names and sizes; click to dive in, click the centre to go back. The folder list stays in sync with the chart.
 - **Fast, live scans.** A Rust scanner built on `getattrlistbulk(2)` reads a whole Mac in seconds, and the chart grows smoothly while it works. Sizes match `du`; hard links count once; APFS firmlinks are not counted twice; iCloud files are never downloaded.
 - **Free up space.** Finds what hides behind macOS "System Data": app caches (Chrome, Slack, VS Code and other web apps included), logs, Xcode and simulator data, developer tool caches, old iPhone backups, installers, Time Machine snapshots — plus your biggest apps with when you last opened them, and leftovers of apps you have uninstalled. Not a hard-coded list: app names and "is it still installed?" come from macOS itself, so it works for any app.
 - **Safe by default.** Everything goes to the Trash first, only what the analysis found can be removed, and data of installed apps is shown for reference only.

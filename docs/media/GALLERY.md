@@ -12,7 +12,7 @@ Pick a disk: the sunburst sweeps in and grows smoothly as the scan finds more, i
 
 ### Explore — `explore.gif`
 
-Hover a ring to see a folder's name, size and share; click to zoom into it; click the centre to go back up.
+Hover a folder: lines lead to the biggest items inside it, each labelled with its name and size. Click to zoom in, click the centre to go back up.
 
 ![Explore](explore.gif)
 
