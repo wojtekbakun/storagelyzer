@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "install-app": "zsh scripts/install-app.sh",
-    "media": "node scripts/media.mjs"
+    "media": "node scripts/media.mjs",
+    "site-media": "bash scripts/site-media.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
