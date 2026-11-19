@@ -365,6 +365,16 @@ const snapshotUrl = (() => {
   return url && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(url) ? url : null; // files of this site only
 })();
 
+/** `?sandboxed` behaves like the Mac App Store build: disks need permission first.
+ *  `?appstore` is the same build with the startup disk already allowed (store screenshots). */
+const sandboxed = params.has("sandboxed") || params.has("appstore");
+/** Clean-up actions that run other programs; the App Store build leaves them out. */
+const SANDBOX_ACTIONS: Record<string, CleanupCategory["action"] | null> = {
+  brewCleanup: null,
+  snapshots: null,
+  simulators: "info",
+};
+
 /** `[name, kind, disk, apparent, items, flags, mtime, children?]`, kind 0 = folder, 1 = file. */
 type SnapNode = [string, number, number, number, number, number, number, SnapNode[]?];
 interface Snapshot {
@@ -417,6 +427,7 @@ export async function mockBackend(): Promise<Backend> {
   const full = snap ? snapshotTree(snap) : new MockTree("Macintosh HD", macintoshHD());
   let tree = full;
   let scanId = 0;
+  let rootGranted = params.has("appstore");
   let rootPath = "/";
   let timer: ReturnType<typeof setInterval> | null = null;
   let currentListener: ((e: ScanEvent) => void) | null = null;
@@ -502,19 +513,23 @@ export async function mockBackend(): Promise<Backend> {
       if (snap) {
         const p = snap.meta.path;
         return {
-          items: [{ kind: "volume" as const, name: p, path: p, total: null, available: null, fsType: "apfs", readOnly: true }],
+          items: [
+            { kind: "volume" as const, name: p, path: p, total: null, available: null, fsType: "apfs", readOnly: true, granted: true },
+          ],
           fullDiskAccess: true,
+          sandboxed: false,
         };
       }
       return {
         items: [
-          { kind: "home", name: "alex", path: "/Users/alex", total: null, available: null, fsType: null, readOnly: false },
-          { kind: "root", name: "Macintosh HD", path: "/", total: 494.38 * GB, available: 121.7 * GB, fsType: "apfs", readOnly: false },
-          { kind: "volume", name: "Backup", path: "/Volumes/Backup", total: 2 * 1e12, available: 0.82 * 1e12, fsType: "apfs", readOnly: false },
-          { kind: "network", name: "NAS", path: "/Volumes/NAS", total: 8 * 1e12, available: 3.1 * 1e12, fsType: "smbfs", readOnly: false },
+          { kind: "home", name: "alex", path: "/Users/alex", total: null, available: null, fsType: null, readOnly: false, granted: !sandboxed || rootGranted },
+          { kind: "root", name: "Macintosh HD", path: "/", total: 494.38 * GB, available: 121.7 * GB, fsType: "apfs", readOnly: false, granted: !sandboxed || rootGranted },
+          { kind: "volume", name: "Backup", path: "/Volumes/Backup", total: 2 * 1e12, available: 0.82 * 1e12, fsType: "apfs", readOnly: false, granted: !sandboxed },
+          { kind: "network", name: "NAS", path: "/Volumes/NAS", total: 8 * 1e12, available: 3.1 * 1e12, fsType: "smbfs", readOnly: false, granted: !sandboxed },
         ],
         // README screenshots (?shot) skip the "no Full Disk Access" banner.
-        fullDiskAccess: document.documentElement.classList.contains("shot"),
+        fullDiskAccess: sandboxed && !rootGranted ? null : document.documentElement.classList.contains("shot"),
+        sandboxed,
       };
     },
 
@@ -673,6 +688,14 @@ export async function mockBackend(): Promise<Backend> {
       return "/Users/alex";
     },
 
+    async ensureAccess(path, message) {
+      if (sandboxed && !rootGranted) {
+        if (!window.confirm(`[mock open panel]\n\n${message}`)) return null;
+        rootGranted = true;
+      }
+      return path;
+    },
+
     async confirm(message) {
       return window.confirm(message);
     },
@@ -705,8 +728,10 @@ export async function mockBackend(): Promise<Backend> {
       }
       for (const cat of cleanupCats) {
         if (cat.size <= 0 && cat.count <= 0 && !cat.denied) continue;
+        const action = sandboxed && cat.action in SANDBOX_ACTIONS ? SANDBOX_ACTIONS[cat.action] : cat.action;
+        if (action === null) continue;
         await delay(140);
-        onEvent({ type: "category", ...cat, entries: cat.entries.filter((e) => !trashed.has(e.path)) });
+        onEvent({ type: "category", ...cat, action, entries: cat.entries.filter((e) => !trashed.has(e.path)) });
       }
       await delay(120);
       onEvent({ type: "done" });

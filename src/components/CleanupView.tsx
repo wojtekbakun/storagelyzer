@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Backend } from "../api";
 import { formatAgo, formatBytes, formatCount, formatNumber, prettyPath } from "../format";
 import { t, type TKey } from "../i18n";
-import { Flag, pathsOf, type CleanupCategory, type CleanupEntry, type CleanupGroup } from "../types";
+import { Flag, pathsOf, type CleanupCategory, type CleanupEntry, type CleanupEvent, type CleanupGroup } from "../types";
 import {
   ChevronLeft,
   ChevronRight,
@@ -106,26 +106,30 @@ export function CleanupView({ api, scanId, home, onClose }: Props) {
     seen.current = new Set();
     let found = 0;
     let bytes = 0;
+    const onEvent = (e: CleanupEvent) => {
+      if (!alive) return;
+      if (e.type === "done") {
+        setAnalyzing(false);
+        api.log("info", `cleanup: ${found} categories, ${bytes} bytes`);
+        return;
+      }
+      const { type: _type, ...cat } = e;
+      found += 1;
+      bytes += cat.size;
+      setCats((prev) => [...prev.filter((c) => c.id !== cat.id), cat]);
+      // Suggest everything that is recreated automatically — once: a category
+      // sent again with more entries must not re-select what the user unticked.
+      if (cat.group === "safe" && cat.action === "trash") {
+        const fresh = cat.entries.filter((en) => !en.locked && !seen.current.has(en.path)).map((en) => en.path);
+        if (fresh.length > 0) setSelected((prev) => new Set([...prev, ...fresh]));
+      }
+      for (const en of cat.entries) seen.current.add(en.path);
+    };
+    // App Store build: the analysis reads the startup disk, which the user allows once.
     api
-      .analyzeCleanup(scanId, (e) => {
-        if (!alive) return;
-        if (e.type === "done") {
-          setAnalyzing(false);
-          api.log("info", `cleanup: ${found} categories, ${bytes} bytes`);
-          return;
-        }
-        const { type: _type, ...cat } = e;
-        found += 1;
-        bytes += cat.size;
-        setCats((prev) => [...prev.filter((c) => c.id !== cat.id), cat]);
-        // Suggest everything that is recreated automatically — once: a category
-        // sent again with more entries must not re-select what the user unticked.
-        if (cat.group === "safe" && cat.action === "trash") {
-          const fresh = cat.entries.filter((en) => !en.locked && !seen.current.has(en.path)).map((en) => en.path);
-          if (fresh.length > 0) setSelected((prev) => new Set([...prev, ...fresh]));
-        }
-        for (const en of cat.entries) seen.current.add(en.path);
-      })
+      .ensureAccess("/", t("accessCleanupMessage"), t("accessAllow"))
+      .catch(() => null)
+      .then(() => (alive ? api.analyzeCleanup(scanId, onEvent) : undefined))
       .catch((err) => {
         if (!alive) return;
         setAnalyzing(false);

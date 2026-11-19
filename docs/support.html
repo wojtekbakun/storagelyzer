@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storagelyzer support</title>
+<meta name="description" content="Help with Storagelyzer, the disk usage analyzer for macOS: disk access, Full Disk Access, sizes, clean-up.">
+<link rel="icon" type="image/png" href="media/icon.png">
+<style>
+:root {
+  --bg: #f4f6fb; --surface: #ffffff; --fg: #131a2e; --muted: #586079;
+  --line: rgba(19, 26, 46, 0.12); --accent: #2f5fe4;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1020; --surface: #141a2d; --fg: #e8ecf7; --muted: #9ba4bf;
+    --line: rgba(232, 236, 247, 0.12); --accent: #88a8ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1020; --surface: #141a2d; --fg: #e8ecf7; --muted: #9ba4bf;
+  --line: rgba(232, 236, 247, 0.12); --accent: #88a8ff; color-scheme: dark;
+}
+:root:not([data-lang="pl"]) [lang="pl"], :root[data-lang="pl"] [lang="en"] { display: none !important; }
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 1.0625rem/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-underline-offset: 0.18em; }
+.wrap { max-width: 46rem; margin-inline: auto; padding: 32px 16px 64px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 40px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-weight: 700; font-size: 1.125rem; }
+.brand img { width: 32px; height: 32px; }
+.switch { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.switch button { appearance: none; border: 0; border-radius: 7px; padding: 6px 11px; background: transparent; color: var(--muted); font: 600 0.8125rem/1 var(--font); cursor: pointer; }
+.switch button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+h1 { font-size: clamp(1.9rem, 5vw, 2.5rem); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 8px; }
+h2 { font-size: 1.2rem; margin: 36px 0 8px; }
+.meta { color: var(--muted); margin: 0 0 28px; }
+.summary { padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.summary p { margin: 0; }
+ul { padding-left: 1.2em; }
+li { margin: 6px 0; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; overflow-wrap: anywhere; }
+details { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 14px 18px; margin: 10px 0; }
+summary { cursor: pointer; font-weight: 600; }
+details[open] summary { margin-bottom: 6px; }
+details p { margin: 8px 0 0; }
+.contact { margin-top: 36px; padding: 18px 20px; border-radius: 14px; border: 1px solid var(--line); }
+footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="./"><img src="media/icon.png" alt="">Storagelyzer</a>
+    <div class="switch" role="group" aria-label="Language">
+      <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-set-lang="pl" aria-pressed="false">PL</button>
+    </div>
+  </header>
+
+  <main lang="en">
+    <h1>Support</h1>
+    <p class="meta">Storagelyzer: see what fills your Mac’s disk and free it up safely.</p>
+
+    <h2>Getting started</h2>
+    <details open>
+      <summary>Why does the app ask me to “Allow Access” to a disk?</summary>
+      <p>Apps from the Mac App Store can read only the disks and folders you pick. Click a disk (for example Macintosh HD) and confirm with <strong>Allow Access</strong> in the window that opens. Storagelyzer remembers your choice, so it asks only once per disk or folder.</p>
+    </details>
+    <details>
+      <summary>The totals are lower than in System Settings. Why?</summary>
+      <p>macOS hides some places (Mail, Messages, Safari and other apps’ data) until you give the app <strong>Full Disk Access</strong>: System Settings → Privacy &amp; Security → Full Disk Access → <strong>+</strong> → Storagelyzer, then quit and reopen the app. The rest of the gap is usually Time Machine local snapshots, purgeable space and APFS system data; the app shows how much of the used space it could see.</p>
+    </details>
+    <details>
+      <summary>Why do “On disk” and “Size” differ?</summary>
+      <p>“On disk” is the space files really take; “Size” is what they claim, like “Size” in Finder. Sparse files (a Docker disk image), compressed files and files kept only in iCloud make the two differ. Click the note under the chart to see which files cause it.</p>
+    </details>
+
+    <h2>Freeing up space</h2>
+    <details>
+      <summary>Is it safe to delete what the app suggests?</summary>
+      <p>Items in “Safe to delete” are recreated by apps on their own (caches, logs, build data). Everything you remove goes to the Trash first, so you can put it back. Data of installed apps is shown for reference only and cannot be removed from the app.</p>
+    </details>
+    <details>
+      <summary>Where are Homebrew, simulator and Time Machine clean-up?</summary>
+      <p>Mac App Store apps may not run other programs with your rights or ask for an administrator password, so these three actions are only in the version you build from the <a href="https://github.com/wojtekbakun/storagelyzer">source code</a>. The App Store version still measures the simulators and can show them in Finder.</p>
+    </details>
+    <details>
+      <summary>How do I make the app forget the disks I allowed?</summary>
+      <p>Quit Storagelyzer and delete the folder <code>~/Library/Containers/com.wojtek.storagelyzer</code> (or delete the app). Next time it will ask again.</p>
+    </details>
+
+    <div class="contact">
+      <strong>Still stuck?</strong> Report a problem or ask a question on <a href="https://github.com/wojtekbakun/storagelyzer/issues">GitHub</a>. Please include your macOS version and what you did. See also the <a href="privacy.html">privacy policy</a>.
+    </div>
+  </main>
+
+  <main lang="pl">
+    <h1>Pomoc</h1>
+    <p class="meta">Storagelyzer: zobacz, co zajmuje miejsce na Twoim Macu, i bezpiecznie je zwolnij.</p>
+
+    <h2>Pierwsze kroki</h2>
+    <details open>
+      <summary>Dlaczego aplikacja prosi o „Zezwól na dostęp” do dysku?</summary>
+      <p>Aplikacje z Mac App Store mogą czytać tylko te dyski i foldery, które wskażesz. Kliknij dysk (np. Macintosh HD) i potwierdź przyciskiem <strong>Zezwól na dostęp</strong> w oknie, które się otworzy. Storagelyzer zapamięta wybór, więc zapyta tylko raz o każdy dysk lub folder.</p>
+    </details>
+    <details>
+      <summary>Wynik jest mniejszy niż w Ustawieniach systemowych. Dlaczego?</summary>
+      <p>macOS ukrywa część miejsc (dane Poczty, Wiadomości, Safari i innych aplikacji), dopóki nie nadasz aplikacji <strong>Pełnego dostępu do dysku</strong>: Ustawienia systemowe → Prywatność i ochrona → Pełny dostęp do dysku → <strong>+</strong> → Storagelyzer, a potem zamknij i otwórz aplikację ponownie. Resztę różnicy zwykle stanowią lokalne migawki Time Machine, pamięć do wyczyszczenia (purgeable) i dane systemowe APFS; aplikacja pokazuje, jaką część zajętego miejsca udało się zobaczyć.</p>
+    </details>
+    <details>
+      <summary>Czym różni się „Na dysku” od „Rozmiaru”?</summary>
+      <p>„Na dysku” to miejsce, które pliki naprawdę zajmują; „Rozmiar” to tyle, ile deklarują (jak „Rozmiar” w Finderze). Pliki rzadkie (obraz dysku Dockera), skompresowane i trzymane tylko w iCloud sprawiają, że te liczby się różnią. Kliknij notkę pod wykresem, by zobaczyć, które pliki za to odpowiadają.</p>
+    </details>
+
+    <h2>Zwalnianie miejsca</h2>
+    <details>
+      <summary>Czy to, co proponuje aplikacja, można bezpiecznie usunąć?</summary>
+      <p>Pozycje z grupy „Bezpieczne do usunięcia” aplikacje odtwarzają same (pamięć podręczna, logi, dane kompilacji). Wszystko, co usuniesz, najpierw trafia do Kosza, więc możesz to przywrócić. Dane zainstalowanych aplikacji są pokazywane tylko informacyjnie i nie da się ich usunąć z poziomu aplikacji.</p>
+    </details>
+    <details>
+      <summary>Gdzie jest czyszczenie Homebrew, symulatorów i migawek Time Machine?</summary>
+      <p>Aplikacje z Mac App Store nie mogą uruchamiać innych programów z Twoimi uprawnieniami ani prosić o hasło administratora, dlatego te trzy akcje są tylko w wersji budowanej z <a href="https://github.com/wojtekbakun/storagelyzer">kodu źródłowego</a>. Wersja z App Store nadal mierzy symulatory i pokazuje je w Finderze.</p>
+    </details>
+    <details>
+      <summary>Jak sprawić, by aplikacja zapomniała dozwolone dyski?</summary>
+      <p>Zamknij Storagelyzera i usuń folder <code>~/Library/Containers/com.wojtek.storagelyzer</code> (albo usuń aplikację). Przy następnym uruchomieniu zapyta ponownie.</p>
+    </details>
+
+    <div class="contact">
+      <strong>Nadal coś nie działa?</strong> Zgłoś problem albo zadaj pytanie na <a href="https://github.com/wojtekbakun/storagelyzer/issues">GitHubie</a>. Podaj wersję macOS i to, co zrobiłeś. Zobacz też <a href="privacy.html">politykę prywatności</a>.
+    </div>
+  </main>
+
+  <footer>
+    <a href="./"><span lang="en">Storagelyzer home</span><span lang="pl">Strona Storagelyzera</span></a>
+    <a href="privacy.html"><span lang="en">Privacy policy</span><span lang="pl">Polityka prywatności</span></a>
+  </footer>
+</div>
+<script>
+(() => {
+  const root = document.documentElement;
+  const KEY = "storagelyzer-site-lang";
+  const set = (lang) => {
+    root.dataset.lang = lang;
+    root.lang = lang;
+    document.querySelectorAll("[data-set-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setLang === lang)));
+  };
+  let lang = new URLSearchParams(location.search).get("lang");
+  if (lang !== "pl" && lang !== "en") {
+    try { lang = localStorage.getItem(KEY); } catch { lang = null; }
+  }
+  if (lang !== "pl" && lang !== "en") lang = (navigator.language || "").toLowerCase().startsWith("pl") ? "pl" : "en";
+  set(lang);
+  document.querySelectorAll("[data-set-lang]").forEach((b) =>
+    b.addEventListener("click", () => {
+      set(b.dataset.setLang);
+      try { localStorage.setItem(KEY, b.dataset.setLang); } catch {}
+    }),
+  );
+})();
+</script>
+</body>
+</html>

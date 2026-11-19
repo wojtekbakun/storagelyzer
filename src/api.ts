@@ -31,7 +31,12 @@ export interface Backend {
   trashNode(scanId: number, id: number): Promise<void>;
   getDenied(scanId: number): Promise<string[]>;
   openFullDiskAccess(): Promise<void>;
-  pickFolder(title: string): Promise<string | null>;
+  /** Folder picker; `message` is shown at the top of the panel, `prompt` on its button. */
+  pickFolder(message: string, prompt: string): Promise<string | null>;
+  /** Makes sure `path` can be read. In the App Store build this asks the user
+   *  to allow the disk or folder (once; the choice is remembered). Resolves to
+   *  the folder to scan, or null when the user cancelled. */
+  ensureAccess(path: string, message: string, prompt: string): Promise<string | null>;
   confirm(message: string, title: string, okLabel: string, cancelLabel: string): Promise<boolean>;
   alert(message: string, title: string): Promise<void>;
   onFolderDrop(cb: (path: string) => void): () => void;
@@ -76,10 +81,8 @@ async function tauriBackend(): Promise<Backend> {
     trashNode: (scanId, id) => invoke("trash_node", { scanId, id }),
     getDenied: (scanId) => invoke("get_denied", { scanId }),
     openFullDiskAccess: () => invoke("open_full_disk_access"),
-    pickFolder: async (title) => {
-      const res = await dialog.open({ directory: true, multiple: false, title });
-      return typeof res === "string" ? res : null;
-    },
+    pickFolder: (message, prompt) => invoke<string | null>("choose_folder", { message, prompt }),
+    ensureAccess: (path, message, prompt) => invoke<string | null>("ensure_access", { path, message, prompt }),
     confirm: (message, title, okLabel, cancelLabel) =>
       dialog.ask(message, { title, kind: "warning", okLabel, cancelLabel }),
     alert: async (message, title) => {

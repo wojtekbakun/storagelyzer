@@ -2,6 +2,7 @@ pub mod apps;
 pub mod cleanup;
 pub mod commands;
 pub mod macos;
+pub mod sandbox;
 pub mod scan;
 pub mod tree;
 pub mod volumes;
@@ -11,6 +12,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(commands::AppState::default())
+        .setup(|app| {
+            sandbox::restore(app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::list_locations,
             commands::start_scan,
@@ -34,6 +39,8 @@ pub fn run() {
             commands::trash_info,
             commands::empty_trash,
             commands::reveal_path,
+            commands::choose_folder,
+            commands::ensure_access,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -2,6 +2,7 @@
 
 use crate::cleanup::{self, Allowed, Category, TrashInfo};
 use crate::macos;
+use crate::sandbox;
 use crate::scan::{Progress, Scanner};
 use crate::tree::{NodeId, NodeInfo, RingNode, SizeGap, SizeMode, Tree, ROOT};
 use crate::volumes::{self, Location};
@@ -94,6 +95,8 @@ pub struct ScanStarted {
 pub struct Locations {
     pub items: Vec<Location>,
     pub full_disk_access: Option<bool>,
+    /// Mac App Store build: disks and folders need the user's permission first.
+    pub sandboxed: bool,
 }
 
 #[derive(Serialize)]
@@ -170,8 +173,41 @@ fn spawn_scan(session: Arc<Session>, scanner: Arc<Scanner>, start: NodeId, on_ev
 pub async fn list_locations() -> CmdResult<Locations> {
     Ok(Locations {
         items: volumes::locations(),
-        full_disk_access: macos::has_full_disk_access(),
+        full_disk_access: full_disk_access(),
+        sandboxed: sandbox::is_sandboxed(),
     })
+}
+
+/// Full Disk Access, when it can be told: in the sandbox only once the home
+/// folder is granted (before that every probe fails anyway).
+fn full_disk_access() -> Option<bool> {
+    let home = volumes::home_dir()?;
+    if !sandbox::is_granted(&home) {
+        return None;
+    }
+    macos::has_full_disk_access()
+}
+
+/// Folder picker. In the sandbox the choice is remembered, so later scans of
+/// that folder work without asking again.
+#[tauri::command]
+pub async fn choose_folder(app: AppHandle, message: String, prompt: String) -> CmdResult<Option<String>> {
+    tauri::async_runtime::spawn_blocking(move || sandbox::choose_folder(&app, message, prompt))
+        .await
+        .map(|p| p.map(|p| p.to_string_lossy().into_owned()))
+        .map_err(|e| e.to_string())
+}
+
+/// Makes sure `path` may be read; in the sandbox asks the user to allow it
+/// (an open panel showing that disk or folder). Returns the folder to scan,
+/// or `None` when the user cancelled.
+#[tauri::command]
+pub async fn ensure_access(app: AppHandle, path: String, message: String, prompt: String) -> CmdResult<Option<String>> {
+    let path = expand_home(&path);
+    tauri::async_runtime::spawn_blocking(move || sandbox::ensure_access(&app, &path, message, prompt))
+        .await
+        .map(|p| p.map(|p| p.to_string_lossy().into_owned()))
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -468,7 +504,7 @@ pub async fn analyze_cleanup(
     std::thread::Builder::new()
         .name("cleanup".into())
         .spawn(move || {
-            let fda = macos::has_full_disk_access() == Some(true);
+            let fda = full_disk_access() == Some(true);
             let state = app.state::<AppState>();
             cleanup::analyze(&home, fda, tree, &mut |cat| {
                 state.cleanup_allowed.0.lock().extend(cleanup::trashable_paths(&cat));

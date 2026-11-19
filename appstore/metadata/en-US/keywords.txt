@@ -1,0 +1,1 @@
+storage,space,cleaner,cleanup,cache,folder size,sunburst,chart,xcode,system data,purgeable,trash

@@ -58,12 +58,22 @@ cd src-tauri && cargo test  # scanner, tree, clean-up rules
 npm run media               # re-create the screenshots and GIFs (needs Chrome and ffmpeg)
 ```
 
+### Mac App Store build
+
+```bash
+npm run appstore -- local   # the App Store version (App Sandbox), signed ad hoc, to try locally
+npm run appstore -- build   # signed universal .pkg for App Store Connect (needs a developer account)
+```
+
+The same code runs in both builds; in the App Sandbox the app asks for access to each disk or folder once and leaves out the actions that need other programs or an administrator password. The checklist, store texts and screenshots are in [appstore/](appstore/README.md) (in Polish).
+
 | Where | What |
 |---|---|
 | `src-tauri/src/scan/` | parallel scanner: `getattrlistbulk`, firmlinks, volume boundaries |
 | `src-tauri/src/tree.rs` | in-memory tree, ~48 bytes per file, consistent during a scan |
 | `src-tauri/src/cleanup.rs` | "Free up space" rules |
 | `src-tauri/src/apps.rs` | LaunchServices and Spotlight lookups (app names, last opened) |
+| `src-tauri/src/sandbox.rs` | App Sandbox: access panel, security-scoped bookmarks |
 | `src/components/RingChart.tsx` | canvas sunburst: zoom, live morphing, hit testing |
 
 Design notes and the reasoning behind the scanner (in Polish): [docs/README.pl.md](docs/README.pl.md).

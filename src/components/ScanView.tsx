@@ -63,6 +63,8 @@ interface Props {
   api: Backend;
   path: string;
   home: string | null;
+  /** Mac App Store build: Quick Look (a helper process) is not available in the sandbox. */
+  sandboxed: boolean;
   onBack(): void;
 }
 
@@ -85,7 +87,7 @@ function loadWidth(): number {
   return 520;
 }
 
-export function ScanView({ api, path, home, onBack }: Props) {
+export function ScanView({ api, path, home, sandboxed, onBack }: Props) {
   const [session, setSession] = useState<ScanStarted | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
@@ -443,7 +445,7 @@ export function ScanView({ api, path, home, onBack }: Props) {
     const items: MenuEntry[] = [
       { label: t("menuOpen"), icon: <OpenIcon />, onSelect: () => void act(tg.id, "open") },
       { label: t("menuReveal"), icon: <FinderIcon />, onSelect: () => void act(tg.id, "reveal") },
-      { label: t("menuQuickLook"), icon: <EyeIcon />, onSelect: () => void act(tg.id, "quicklook") },
+      ...(sandboxed ? [] : [{ label: t("menuQuickLook"), icon: <EyeIcon />, onSelect: () => void act(tg.id, "quicklook") }]),
       {
         label: t("menuCopyPath"),
         icon: <CopyIcon />,
@@ -746,10 +748,10 @@ export function ScanView({ api, path, home, onBack }: Props) {
               onSelect={setSelectedId}
               onOpen={(n: NodeInfo) => {
                 if (n.kind === "dir") void zoomInto(n.id);
-                else void act(n.id, "quicklook");
+                else void act(n.id, sandboxed ? "open" : "quicklook");
               }}
               onContext={(n, x, y) => openMenu({ id: n.id, name: n.name, kind: n.kind, flags: n.flags, isFocus: false }, x, y)}
-              onQuickLook={(n) => void act(n.id, "quicklook")}
+              onQuickLook={(n) => (sandboxed ? undefined : void act(n.id, "quicklook"))}
               onTrash={(n) => void trash(n.id)}
             />
           ) : (

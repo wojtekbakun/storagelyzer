@@ -4,6 +4,7 @@
 //
 //   npm run dev                     # in another terminal
 //   npm run media [-- name …]       # all, or e.g. `npm run media -- scan cleanup`
+//   npm run media -- appstore       # Mac App Store screenshots (appstore/screenshots)
 //
 // Needs Google Chrome and ffmpeg (brew install ffmpeg). Drives headless Chrome
 // over the DevTools protocol directly, so no npm packages are required.
@@ -340,7 +341,105 @@ async function logo(page) {
   rmSync(dir, { recursive: true, force: true });
 }
 
+// Mac App Store screenshots: 2880 × 1800 (16:10), a caption over the app window.
+const STORE_W = 1440;
+const STORE_H = 900;
+const STORE_TEXT = {
+  main: {
+    en: ["See what fills your Mac’s disk", "Your whole disk as interactive rings, measured in seconds."],
+    pl: ["Zobacz, co zajmuje miejsce na dysku", "Cały dysk jako interaktywne pierścienie, zmierzony w kilka sekund."],
+  },
+  cleanup: {
+    en: ["Free up space, safely", "Caches, logs, Xcode data, old backups and leftovers of removed apps. Everything goes to the Trash first."],
+    pl: ["Zwolnij miejsce, bezpiecznie", "Pamięć podręczna, logi, dane Xcode, stare kopie i resztki usuniętych aplikacji. Wszystko najpierw trafia do Kosza."],
+  },
+  hover: {
+    en: ["Look inside any folder", "Hover and lines point to the biggest items, with names and sizes. Click to dive in."],
+    pl: ["Zajrzyj do każdego folderu", "Najedź, a linie wskażą największe elementy z nazwami i rozmiarami. Kliknij, by wejść głębiej."],
+  },
+  size: {
+    en: ["Honest sizes", "When a file claims 1 TB but takes 20 GB of your disk, Storagelyzer shows you why."],
+    pl: ["Uczciwe rozmiary", "Gdy plik deklaruje 1 TB, a zajmuje 20 GB dysku, Storagelyzer pokaże dlaczego."],
+  },
+  start: {
+    en: ["Every disk you use", "Your Mac, external drives and network volumes, with free space at a glance."],
+    pl: ["Wszystkie Twoje dyski", "Mac, dyski zewnętrzne i woluminy sieciowe. Wolne miejsce widać od razu."],
+  },
+};
+
+async function storeShot(page, png, file, [title, sub], { dark }) {
+  const dir = mkdtempSync(join(tmpdir(), "storagelyzer-store-"));
+  writeFileSync(join(dir, "shot.png"), png);
+  const winW = 1100;
+  const winH = Math.round((winW * H) / W);
+  writeFileSync(
+    join(dir, "store.html"),
+    `<!doctype html><html><body style="margin:0;width:${STORE_W}px;height:${STORE_H}px;overflow:hidden;
+      background:radial-gradient(120% 90% at 50% 0%, #26345f 0%, #141a2f 58%, #0c1020 100%);
+      font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;color:#eef1fa;text-align:center">
+      <div style="padding:46px 120px 0">
+        <div style="font-size:50px;font-weight:700;letter-spacing:-1px;line-height:1.1">${title}</div>
+        <div style="font-size:23px;color:#b8c0da;margin-top:14px;line-height:1.35">${sub}</div>
+      </div>
+      <div style="position:absolute;left:${(STORE_W - winW) / 2}px;top:${STORE_H - winH - 36}px;width:${winW}px;height:${winH}px;
+        border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px ${dark ? "rgba(255,255,255,.16)" : "rgba(0,0,0,.2)"},0 30px 80px rgba(0,0,0,.55)">
+        <img src="shot.png" style="display:block;width:${winW}px;height:${winH}px"></div></body></html>`,
+  );
+  await page.send("Emulation.setDeviceMetricsOverride", { width: STORE_W, height: STORE_H, deviceScaleFactor: 2, mobile: false });
+  await page.navigate(`file://${join(dir, "store.html")}`);
+  writeFileSync(file, await page.screenshot());
+  rmSync(dir, { recursive: true, force: true });
+  console.log(`  ${file.slice(ROOT.length + 1)}`);
+}
+
 const JOBS = {
+  async appstore(page) {
+    // The demo behaves like the App Store build (no Homebrew / Time Machine actions, no Quick Look).
+    const url = `${APP}&appstore`;
+    for (const [lang, locale] of [["en", "en-US"], ["pl", "pl"]]) {
+      const dir = join(ROOT, "appstore/screenshots", locale);
+      mkdirSync(dir, { recursive: true });
+      const out = (n, key) => join(dir, `${n}-${key}.png`);
+
+      await page.open({ dark: true, dpr: 2, lang, url });
+      await page.scanDisk();
+      await sleep(900);
+      const home = await page.findSegment(2, "alex");
+      await page.moveTo(home.x, home.y, 0);
+      await sleep(300);
+      await storeShot(page, await page.screenshot(), out(1, "main"), STORE_TEXT.main[lang], { dark: true });
+
+      await page.open({ dark: true, dpr: 2, lang, url });
+      await page.scanDisk();
+      await page.click(await page.center(".tb-button-label"), 0);
+      await page.waitUntil(`!document.querySelector(".cl-analyzing")`);
+      await sleep(600);
+      await storeShot(page, await page.screenshot(), out(2, "cleanup"), STORE_TEXT.cleanup[lang], { dark: true });
+
+      await page.open({ dark: false, dpr: 2, lang, url });
+      await page.scanDisk();
+      await sleep(600);
+      await page.click(await page.findSegment(2, "alex"), 0);
+      await sleep(1100);
+      const inside = await page.chartPoint(1, 0.2);
+      await page.moveTo(inside.x, inside.y, 0);
+      await sleep(400);
+      await storeShot(page, await page.screenshot(), out(3, "hover"), STORE_TEXT.hover[lang], { dark: false });
+
+      await page.open({ dark: true, dpr: 2, lang, url });
+      await page.scanDisk();
+      await page.click(await page.center(".segmented button", lang === "pl" ? "Rozmiar" : "Size"), 0);
+      await sleep(900);
+      await page.click(await page.center(".chart-note .link-button"), 0);
+      await sleep(900);
+      await storeShot(page, await page.screenshot(), out(4, "size"), STORE_TEXT.size[lang], { dark: true });
+
+      await page.open({ dark: false, dpr: 2, lang, url });
+      await sleep(300);
+      await storeShot(page, await page.screenshot(), out(5, "start"), STORE_TEXT.start[lang], { dark: false });
+    }
+  },
+
   async logo(page) {
     await logo(page);
   },
@@ -521,7 +620,7 @@ const JOBS = {
 
 async function main() {
   const wanted = process.argv.slice(2);
-  const jobs = wanted.length ? wanted : Object.keys(JOBS);
+  const jobs = wanted.length ? wanted : Object.keys(JOBS).filter((j) => j !== "appstore");
   try {
     await fetch(APP.replace("?shot", ""));
   } catch {
