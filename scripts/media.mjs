@@ -396,7 +396,8 @@ const JOBS = {
   async appstore(page) {
     // The demo behaves like the App Store build (no Homebrew / Time Machine actions, no Quick Look).
     const url = `${APP}&appstore`;
-    for (const [lang, locale] of [["en", "en-US"], ["pl", "pl"]]) {
+    // English only: the Polish listing shows the English screenshots too.
+    for (const [lang, locale] of [["en", "en-US"]]) {
       const dir = join(ROOT, "appstore/screenshots", locale);
       mkdirSync(dir, { recursive: true });
       const out = (n, key) => join(dir, `${n}-${key}.png`);

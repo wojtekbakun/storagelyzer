@@ -15,7 +15,7 @@ Wszystko, czego potrzeba, żeby Storagelyzer trafił do Mac App Store jako darmo
 | Brak szyfrowania, więc bez pytań o eksport | `ITSAppUsesNonExemptEncryption = false` w `src-tauri/Info.plist` |
 | Wersja 1.0.0 | `tauri.conf.json`, `Cargo.toml`, `package.json` |
 | Budowanie, podpisywanie, paczka `.pkg`, wysyłka | `scripts/appstore.sh` (`npm run appstore -- …`) |
-| Zrzuty ekranu 2880 × 1800, EN i PL | `appstore/screenshots/` (generuje `npm run media -- appstore`) |
+| Zrzuty ekranu 2880 × 1800, po angielsku (polska wersja sklepu też je pokazuje) | `appstore/screenshots/en-US/` (generuje `npm run media -- appstore`) |
 | Nazwa, podtytuł, opis, słowa kluczowe, linki (EN, PL) | `appstore/metadata/` (układ zgodny z `fastlane deliver`) |
 | Notatki dla recenzenta Apple | `appstore/metadata/review_information/notes.txt` |
 | Polityka prywatności i strona pomocy | `docs/privacy.html`, `docs/support.html` (storagelyzer.wojciechbakun.pl) |
@@ -149,7 +149,7 @@ W App Store Connect → Storagelyzer → wersja 1.0 (dodaj też lokalizację **P
 | Support URL | `metadata/<język>/support_url.txt` |
 | Marketing URL | `metadata/<język>/marketing_url.txt` |
 | Privacy Policy URL (App Information / App Privacy) | `metadata/<język>/privacy_url.txt` |
-| Screenshots (Mac) | `screenshots/en-US/*.png`, `screenshots/pl/*.png` w kolejności nazw |
+| Screenshots (Mac) | `screenshots/en-US/*.png` w kolejności nazw, tylko w lokalizacji angielskiej; polska pokazuje te same |
 | Copyright | `metadata/copyright.txt` |
 | Category | Primary: Utilities, Secondary: Developer Tools (opcjonalnie) |
 

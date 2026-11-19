@@ -15,7 +15,7 @@ Everything needed to put Storagelyzer on the Mac App Store as a free app. The "N
 | No encryption, so no export compliance questions | `ITSAppUsesNonExemptEncryption = false` in `src-tauri/Info.plist` |
 | Version 1.0.0 | `tauri.conf.json`, `Cargo.toml`, `package.json` |
 | Build, signing, `.pkg`, upload | `scripts/appstore.sh` (`npm run appstore -- …`) |
-| Screenshots, 2880 × 1800, English and Polish | `appstore/screenshots/` (made by `npm run media -- appstore`) |
+| Screenshots, 2880 × 1800, English (also used by the Polish listing) | `appstore/screenshots/en-US/` (made by `npm run media -- appstore`) |
 | Name, subtitle, description, keywords, links (English, Polish) | `appstore/metadata/` (laid out for `fastlane deliver`) |
 | Notes for App Review | `appstore/metadata/review_information/notes.txt` |
 | Privacy policy and support page | `docs/privacy.html`, `docs/support.html` (storagelyzer.wojciechbakun.pl) |
@@ -149,7 +149,7 @@ App Store Connect → Storagelyzer → version 1.0 (also add the **Polish** loca
 | Support URL | `metadata/<locale>/support_url.txt` |
 | Marketing URL | `metadata/<locale>/marketing_url.txt` |
 | Privacy Policy URL (App Information / App Privacy) | `metadata/<locale>/privacy_url.txt` |
-| Screenshots (Mac) | `screenshots/en-US/*.png`, `screenshots/pl/*.png`, in file name order |
+| Screenshots (Mac) | `screenshots/en-US/*.png`, in file name order, in the English localization only; the Polish one shows them too |
 | Copyright | `metadata/copyright.txt` |
 | Category | Primary: Utilities, Secondary: Developer Tools (optional) |
 
