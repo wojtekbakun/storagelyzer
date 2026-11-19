@@ -274,11 +274,6 @@ button:focus-visible {
   color: var(--text-2);
 }
 
-.segmented-small button {
-  font-size: 11px;
-  padding: 2px 8px;
-}
-
 .segmented button.is-on {
   background: var(--seg-on);
   color: var(--text);

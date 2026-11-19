@@ -1,6 +1,6 @@
 import type { Backend } from "../api";
 import { formatBytes } from "../format";
-import { currentLang, setLang, t } from "../i18n";
+import { t } from "../i18n";
 import type { Location, Locations } from "../types";
 import {
   DiskIcon,
@@ -57,19 +57,6 @@ export function StartScreen({ api, locations, isDev, onScan, onRefresh, onCleanu
           Storagelyzer
         </div>
         <div className="tb-spacer" data-tauri-drag-region />
-        <div className="segmented segmented-small" role="radiogroup" aria-label="Language">
-          {(["pl", "en"] as const).map((l) => (
-            <button
-              key={l}
-              className={currentLang === l ? "is-on" : ""}
-              role="radio"
-              aria-checked={currentLang === l}
-              onClick={() => currentLang !== l && setLang(l)}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
       </header>
       <main className="start">
         <div className="start-inner">

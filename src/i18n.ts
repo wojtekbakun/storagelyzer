@@ -430,6 +430,8 @@ const en: Dict = {
   "cat.snapshots.d": "macOS removes them when space runs low — you can do it now.",
 };
 
+/** Set by the website so that its embedded demo follows the page language;
+ *  `npm run media` uses it too. The app itself ignores it. */
 const LANG_KEY = "storagelyzer.lang";
 
 function storedLang(): string | null {
@@ -440,26 +442,16 @@ function storedLang(): string | null {
   }
 }
 
+const inApp = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 const systemLocale: string =
   (typeof navigator !== "undefined" && (navigator.languages?.[0] || navigator.language)) || "en";
-const override = storedLang();
+const override = inApp ? null : storedLang();
 
-/** UI language: the user's choice (start screen), otherwise the system language. */
+/** UI language: Polish when macOS is set to Polish, English otherwise. */
 export const locale: string =
   override === "pl" ? "pl-PL" : override === "en" ? (systemLocale.startsWith("en") ? systemLocale : "en-US") : systemLocale;
 const isPl = locale.toLowerCase().startsWith("pl");
 const dict: Dict = isPl ? pl : en;
-
-export const currentLang: "pl" | "en" = isPl ? "pl" : "en";
-
-export function setLang(lang: "pl" | "en") {
-  try {
-    localStorage.setItem(LANG_KEY, lang);
-  } catch {
-    /* storage unavailable */
-  }
-  window.location.reload();
-}
 
 export type TKey = keyof Dict;
 
