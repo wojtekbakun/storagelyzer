@@ -78,6 +78,9 @@ footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line);
     <h2>Children</h2>
     <p>The app collects no personal data from anyone, including children.</p>
 
+    <h2>This website</h2>
+    <p>This policy is about the app. The website at storagelyzer.wojciechbakun.pl counts visits with Cloudflare Web Analytics, which uses no cookies and does not follow you across sites: it records page views, the referring site, country, and browser and device type, in aggregate. The site is served by Cloudflare (and a copy by GitHub Pages), which process technical data such as IP addresses to deliver the pages, as described in their own privacy policies.</p>
+
     <h2>Changes and contact</h2>
     <p>If this policy changes, the new version will be published on this page with a new date. Questions: <a href="https://github.com/wojtekbakun/storagelyzer/issues">open an issue on GitHub</a>. Storagelyzer is developed by Wojciech Bakun.</p>
   </main>
@@ -106,6 +109,9 @@ footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line);
     <h2>Dzieci</h2>
     <p>Aplikacja nie zbiera danych osobowych od nikogo, w tym od dzieci.</p>
 
+    <h2>Ta strona internetowa</h2>
+    <p>Ta polityka dotyczy aplikacji. Strona storagelyzer.wojciechbakun.pl liczy odwiedziny za pomocą Cloudflare Web Analytics, które nie używa plików cookie i nie śledzi Cię między witrynami: zapisuje zbiorczo wyświetlenia stron, stronę odsyłającą, kraj oraz typ przeglądarki i urządzenia. Stronę serwuje Cloudflare (a jej kopię GitHub Pages), które przetwarzają dane techniczne, np. adresy IP, żeby dostarczyć strony, zgodnie z własnymi politykami prywatności.</p>
+
     <h2>Zmiany i kontakt</h2>
     <p>Jeśli ta polityka się zmieni, nowa wersja pojawi się na tej stronie z nową datą. Pytania: <a href="https://github.com/wojtekbakun/storagelyzer/issues">zgłoś je na GitHubie</a>. Twórcą Storagelyzera jest Wojciech Bakun.</p>
   </main>
@@ -124,12 +130,12 @@ footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line);
     root.lang = lang;
     document.querySelectorAll("[data-set-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setLang === lang)));
   };
+  // English unless Polish was asked for: ?lang=pl (the Polish App Store listing) or the switch.
   let lang = new URLSearchParams(location.search).get("lang");
   if (lang !== "pl" && lang !== "en") {
     try { lang = localStorage.getItem(KEY); } catch { lang = null; }
   }
-  if (lang !== "pl" && lang !== "en") lang = (navigator.language || "").toLowerCase().startsWith("pl") ? "pl" : "en";
-  set(lang);
+  set(lang === "pl" ? "pl" : "en");
   document.querySelectorAll("[data-set-lang]").forEach((b) =>
     b.addEventListener("click", () => {
       set(b.dataset.setLang);

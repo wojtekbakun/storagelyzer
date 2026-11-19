@@ -147,12 +147,12 @@ footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line);
     root.lang = lang;
     document.querySelectorAll("[data-set-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setLang === lang)));
   };
+  // English unless Polish was asked for: ?lang=pl (the Polish App Store listing) or the switch.
   let lang = new URLSearchParams(location.search).get("lang");
   if (lang !== "pl" && lang !== "en") {
     try { lang = localStorage.getItem(KEY); } catch { lang = null; }
   }
-  if (lang !== "pl" && lang !== "en") lang = (navigator.language || "").toLowerCase().startsWith("pl") ? "pl" : "en";
-  set(lang);
+  set(lang === "pl" ? "pl" : "en");
   document.querySelectorAll("[data-set-lang]").forEach((b) =>
     b.addEventListener("click", () => {
       set(b.dataset.setLang);

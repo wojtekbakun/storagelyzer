@@ -65,7 +65,7 @@ npm run appstore -- local   # the App Store version (App Sandbox), signed ad hoc
 npm run appstore -- build   # signed universal .pkg for App Store Connect (needs a developer account)
 ```
 
-The same code runs in both builds; in the App Sandbox the app asks for access to each disk or folder once and leaves out the actions that need other programs or an administrator password. The checklist, store texts and screenshots are in [appstore/](appstore/README.md) (in Polish).
+The same code runs in both builds; in the App Sandbox the app asks for access to each disk or folder once and leaves out the actions that need other programs or an administrator password. The step-by-step guide, store texts and screenshots are in [appstore/](appstore/README.md) ([po polsku](appstore/README.pl.md)).
 
 | Where | What |
 |---|---|

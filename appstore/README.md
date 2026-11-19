@@ -1,188 +1,192 @@
-# Storagelyzer w Mac App Store
+# Storagelyzer on the Mac App Store
 
-Wszystko, czego potrzeba, żeby Storagelyzer trafił do Mac App Store jako darmowa aplikacja. Część „Teraz” da się zrobić bez konta deweloperskiego, a część „Po wykupieniu konta” to lista kroków na dzień, w którym konto będzie aktywne.
+**English** · [Polski](README.pl.md)
 
-## Co jest przygotowane
+Everything needed to put Storagelyzer on the Mac App Store as a free app. The "Now" part works without a developer account; "Once the account is active" is the list of steps for the day the Apple Developer Program membership starts.
 
-| Co | Gdzie |
+## What is ready
+
+| What | Where |
 |---|---|
-| Aplikacja działa w App Sandbox (wymóg Mac App Store) | `src-tauri/src/sandbox.rs` i zmiany w `macos.rs`, `volumes.rs`, `cleanup.rs` |
-| Uprawnienia (entitlements) do sklepu i do testów lokalnych | `src-tauri/macos/AppStore.entitlements`, `Sandbox-local.entitlements` |
-| Manifest prywatności (wymagany przez Apple) | `src-tauri/macos/PrivacyInfo.xcprivacy` |
-| Polskie i angielskie teksty zgód systemowych; dzięki nim sklep pokaże oba języki | `src-tauri/macos/{en,pl}.lproj/InfoPlist.strings` |
-| Brak szyfrowania, więc bez pytań o eksport | `ITSAppUsesNonExemptEncryption = false` w `src-tauri/Info.plist` |
-| Wersja 1.0.0 | `tauri.conf.json`, `Cargo.toml`, `package.json` |
-| Budowanie, podpisywanie, paczka `.pkg`, wysyłka | `scripts/appstore.sh` (`npm run appstore -- …`) |
-| Zrzuty ekranu 2880 × 1800, EN i PL | `appstore/screenshots/` (generuje `npm run media -- appstore`) |
-| Nazwa, podtytuł, opis, słowa kluczowe, linki (EN, PL) | `appstore/metadata/` (układ zgodny z `fastlane deliver`) |
-| Notatki dla recenzenta Apple | `appstore/metadata/review_information/notes.txt` |
-| Polityka prywatności i strona pomocy | `docs/privacy.html`, `docs/support.html` (GitHub Pages) |
+| The app runs in the App Sandbox (required by the Mac App Store) | `src-tauri/src/sandbox.rs`, plus changes in `macos.rs`, `volumes.rs`, `cleanup.rs` |
+| Entitlements for the store and for local testing | `src-tauri/macos/AppStore.entitlements`, `Sandbox-local.entitlements` |
+| Privacy manifest (required by Apple) | `src-tauri/macos/PrivacyInfo.xcprivacy` |
+| English and Polish permission texts; they also make the store list both languages | `src-tauri/macos/{en,pl}.lproj/InfoPlist.strings` |
+| No encryption, so no export compliance questions | `ITSAppUsesNonExemptEncryption = false` in `src-tauri/Info.plist` |
+| Version 1.0.0 | `tauri.conf.json`, `Cargo.toml`, `package.json` |
+| Build, signing, `.pkg`, upload | `scripts/appstore.sh` (`npm run appstore -- …`) |
+| Screenshots, 2880 × 1800, English and Polish | `appstore/screenshots/` (made by `npm run media -- appstore`) |
+| Name, subtitle, description, keywords, links (English, Polish) | `appstore/metadata/` (laid out for `fastlane deliver`) |
+| Notes for App Review | `appstore/metadata/review_information/notes.txt` |
+| Privacy policy and support page | `docs/privacy.html`, `docs/support.html` (storagelyzer.wojciechbakun.pl) |
 
-### Czym wersja z App Store różni się od wersji budowanej ze źródeł
+### How the App Store version differs from the build from source
 
-App Sandbox nie pozwala czytać dysku bez zgody użytkownika, uruchamiać innych programów z jego uprawnieniami ani prosić o hasło administratora. Dlatego:
+The App Sandbox does not let an app read a disk without the user's permission, run other programs with the user's rights or ask for an administrator password. So:
 
-- **Dostęp do dysków.** Przy pierwszym kliknięciu dysku albo folderu macOS pokazuje okno „Zezwól na dostęp”. Zgoda jest zapamiętywana (security-scoped bookmark w kontenerze aplikacji), więc pytanie pada raz. Ekran startowy od razu proponuje zgodę na „Macintosh HD”.
-- **Pełny dostęp do dysku** działa tak jak wcześniej, ale dopiero po udzieleniu zgody na dysk (bez niej nie da się go wykryć).
-- **Nie ma** czyszczenia Homebrew, usuwania niedostępnych symulatorów (sam rozmiar symulatorów nadal jest mierzony) ani usuwania migawek Time Machine, bo te akcje uruchamiają `brew`, `xcrun` albo `tmutil` z hasłem administratora.
-- **Nie ma Szybkiego podglądu**, bo `qlmanage` nie startuje z sandboxu (sprawdzone). W wersji z App Store Enter i dwuklik na pliku otwierają go zamiast podglądu.
-- Finder, Ustawienia systemowe i schowek działają przez AppKit, a nie przez `open` czy `pbcopy`, w obu wersjach.
+- **Disk access.** The first time a disk or folder is opened, macOS shows an "Allow Access" panel. The choice is remembered (a security-scoped bookmark in the app's container), so it asks once. The start screen offers access to "Macintosh HD" right away.
+- **Full Disk Access** works as before, but can only be detected once the disk is allowed.
+- **Left out:** Homebrew clean-up, deleting unavailable simulators (their size is still measured) and deleting Time Machine snapshots, because these run `brew`, `xcrun` or `tmutil` with an administrator password.
+- **No Quick Look**, because `qlmanage` does not start from the sandbox (tested). In the App Store version Return and double-click open a file instead.
+- Finder, System Settings and the clipboard go through AppKit instead of `open` or `pbcopy`, in both versions.
 
-Wersja budowana ze źródeł (`npm run install-app`) działa dokładnie jak dotąd: o tym, w jakim trybie działa aplikacja, decyduje system (zmienna `APP_SANDBOX_CONTAINER_ID`), a nie osobna gałąź kodu.
+The build from source (`npm run install-app`) works exactly as before: macOS decides which mode the app runs in (the `APP_SANDBOX_CONTAINER_ID` variable), not a separate code path.
 
-## Teraz, bez konta deweloperskiego
+## Now, without a developer account
 
-### 1. Przetestuj wersję z App Store na swoim Macu
+### 1. Try the App Store version on your Mac
 
 ```bash
 npm run appstore -- local
 ```
 
-Buduje aplikację z tym samym sandboxem co w sklepie (podpis ad hoc) w `src-tauri/target/appstore/local/Storagelyzer.app` i ją otwiera. Nie zastępuje `/Applications/Storagelyzer.app`. Jej dane i zapamiętane zgody leżą w `~/Library/Containers/com.wojtek.storagelyzer`; żeby zacząć od zera, zamknij aplikację i usuń ten folder.
+Builds the app with the same sandbox as in the store (signed ad hoc) into `src-tauri/target/appstore/local/Storagelyzer.app` and opens it. It does not replace `/Applications/Storagelyzer.app`. Its data and remembered permissions live in `~/Library/Containers/com.wojtek.storagelyzer`; to start from scratch, quit the app and delete that folder.
 
-Co sprawdzić (tego nie da się przeklikać automatycznie, bo to systemowe okna):
+What to check (these are system windows, so this cannot be clicked through automatically):
 
-- [ ] Baner „Zezwól na odczyt dysku” → „Zezwól na dostęp…” → w oknie od razu „Zezwól na dostęp”. Baner znika, a przy Macintosh HD nie ma już etykiety „wymaga zgody”.
-- [ ] Skan Macintosh HD daje podobny wynik jak wersja z `/Applications`.
-- [ ] Zamknij i otwórz ponownie: aplikacja nie pyta drugi raz.
-- [ ] „Wybierz folder…” i przeciągnięcie folderu na okno skanują ten folder.
-- [ ] „Zwolnij miejsce” pokazuje kategorie (bez Homebrew i migawek Time Machine).
-- [ ] „Przenieś do Kosza” na czymś nieważnym (np. pliku z `~/Library/Logs`), a potem przywrócenie go z Kosza.
-- [ ] Prawy przycisk na wierszu → „Pokaż w Finderze”, „Otwórz”, „Kopiuj ścieżkę”.
-- [ ] Pełny dostęp do dysku: Ustawienia systemowe → Prywatność i ochrona → Pełny dostęp do dysku → **+** → `src-tauri/target/appstore/local/Storagelyzer.app`, potem ponowne uruchomienie. Baner o pełnym dostępie znika, a „bez dostępu” w pasku stanu maleje.
-- [ ] Dysk zewnętrzny (jeśli jest): pyta o zgodę osobno.
+- [ ] "Allow access to your disk" banner → "Allow Access…" → "Allow Access" in the panel. The banner disappears and Macintosh HD loses its "needs permission" tag.
+- [ ] A scan of Macintosh HD gives about the same result as the version in `/Applications`.
+- [ ] Quit and reopen: the app does not ask again.
+- [ ] "Choose folder…" and dropping a folder on the window both scan that folder.
+- [ ] "Free up space" lists categories (without Homebrew and Time Machine snapshots).
+- [ ] "Move to Trash" on something unimportant (e.g. a file in `~/Library/Logs`), then put it back from the Trash.
+- [ ] Right-click a row → "Show in Finder", "Open", "Copy path".
+- [ ] Full Disk Access: System Settings → Privacy & Security → Full Disk Access → **+** → `src-tauri/target/appstore/local/Storagelyzer.app`, then reopen the app. The Full Disk Access banner goes away and "not accessible" in the status bar shrinks.
+- [ ] An external drive (if you have one) asks for permission separately.
 
-Tryb sandbox interfejsu można też obejrzeć w przeglądarce: `npm run dev`, potem `http://localhost:1420/?sandboxed`.
+The sandboxed interface can also be seen in a browser: `npm run dev`, then `http://localhost:1420/?sandboxed`.
 
-### 2. Opublikuj stronę prywatności i pomocy
+### 2. Publish the privacy and support pages
 
-App Store Connect wymaga adresu polityki prywatności i strony wsparcia. Po scaleniu tej gałęzi do `main` GitHub Pages opublikuje:
+App Store Connect needs a privacy policy URL and a support URL. The store texts point to:
 
-- https://wojtekbakun.github.io/storagelyzer/privacy.html
-- https://wojtekbakun.github.io/storagelyzer/support.html
+- https://storagelyzer.wojciechbakun.pl/privacy
+- https://storagelyzer.wojciechbakun.pl/support
 
-(Dla polskiej wersji sklepu z dopiskiem `?lang=pl`, tak jak w `metadata/pl/*_url.txt`). Kontakt na stronie pomocy prowadzi do GitHub Issues; jeśli wolisz e-mail, dopisz go w `docs/support.html`.
+(the Polish listing adds `?lang=pl`, see `metadata/pl/*_url.txt`). Without it the pages are in English, with an EN/PL switch in the top right corner.
 
-## Po wykupieniu konta
+The site on that subdomain is a Cloudflare Worker serving the static files from `docs/`. It is deployed with `wdrozenia/aplikacje.sh storagelyzer`, which takes `docs/` from the commit currently checked out in the repository (so merge this branch into `main` and check it out first) and adds Cloudflare Web Analytics. The same pages reach GitHub Pages (wojtekbakun.github.io/storagelyzer) once merged into `main`. The support page's contact link goes to GitHub Issues; if you prefer an e-mail address, add it to `docs/support.html`.
+
+## Once the account is active
 
 ### 3. Apple Developer Program
 
-[developer.apple.com/programs/enroll](https://developer.apple.com/programs/enroll/) → konto **Individual** (osoba prywatna) na Twoje Apple ID z włączonym dwuetapowym uwierzytelnianiem. Kosztuje 99 USD rocznie. W sklepie jako sprzedawca widnieje imię i nazwisko z konta. Aktywacja trwa zwykle od kilku godzin do 2 dni.
+[developer.apple.com/programs/enroll](https://developer.apple.com/programs/enroll/) → **Individual** membership on your Apple ID, with two-factor authentication on. It costs 99 USD a year. The store shows the account holder's legal name as the seller. Activation usually takes from a few hours to 2 days.
 
-Dla darmowej aplikacji **nie trzeba** podpisywać umowy „Paid Apps” ani podawać danych podatkowych i bankowych. Umowa dla darmowych aplikacji jest częścią umowy programu.
+A free app does **not** need the "Paid Apps" agreement or tax and banking details. The agreement for free apps is part of the program agreement.
 
-### 4. Certyfikaty
+### 4. Certificates
 
-Xcode → Settings → Accounts → Twoje Apple ID → Manage Certificates… → **+**:
+Xcode → Settings → Accounts → your Apple ID → Manage Certificates… → **+**:
 
-- **Apple Distribution** – podpis aplikacji,
-- **Mac Installer Distribution** – podpis paczki `.pkg` (w Pęku kluczy widnieje jako „3rd Party Mac Developer Installer: …”).
+- **Apple Distribution** signs the app,
+- **Mac Installer Distribution** signs the `.pkg` (it shows up in Keychain Access as "3rd Party Mac Developer Installer: …").
 
-Pełne nazwy wypisze `security find-identity -v`.
+`security find-identity -v` prints their full names.
 
-### 5. Identyfikator aplikacji i profil
+### 5. App ID and provisioning profile
 
 [developer.apple.com/account/resources](https://developer.apple.com/account/resources/identifiers/list):
 
-1. **Identifiers → +** → App IDs → App → opis „Storagelyzer”, Bundle ID **Explicit**: `com.wojtek.storagelyzer`, platforma macOS. Bez dodatkowych capabilities (sandbox to entitlement, nie capability w portalu).
-2. **Profiles → +** → Distribution → **Mac App Store Connect** → wybierz App ID `com.wojtek.storagelyzer` → certyfikat Apple Distribution → pobierz plik `.provisionprofile`.
+1. **Identifiers → +** → App IDs → App → description "Storagelyzer", Bundle ID **Explicit**: `com.wojtek.storagelyzer`, platform macOS. No extra capabilities (the sandbox is an entitlement, not a capability in the portal).
+2. **Profiles → +** → Distribution → **Mac App Store Connect** → App ID `com.wojtek.storagelyzer` → the Apple Distribution certificate → download the `.provisionprofile`.
 
-Bundle ID po pierwszym wysłaniu jest na zawsze. Jeśli wolisz inny (np. `com.wojtekbakun.storagelyzer`), zmień go teraz w `tauri.conf.json`, `scripts/appstore.sh` i `src-tauri/macos/AppStore.entitlements`.
+The bundle ID is permanent after the first upload. If you prefer another one (e.g. `com.wojtekbakun.storagelyzer`), change it now in `tauri.conf.json`, `scripts/appstore.sh` and `src-tauri/macos/AppStore.entitlements`.
 
-### 6. Ustawienia skryptu
+### 6. Script settings
 
 ```bash
 cp scripts/appstore.env.example scripts/appstore.env
 ```
 
-Uzupełnij Team ID, nazwy obu certyfikatów i ścieżkę do profilu. Plik jest w `.gitignore`. Potem:
+Fill in the Team ID, the names of both certificates and the path to the profile. The file is in `.gitignore`. Then:
 
 ```bash
 npm run appstore -- check
 ```
 
-Wszystko powinno mieć ✓ (klucz API jest opcjonalny).
+Everything should have a ✓ (the API key is optional).
 
-### 7. Aplikacja w App Store Connect
+### 7. The app in App Store Connect
 
 [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → Apps → **+** → New App:
 
-| Pole | Wartość |
+| Field | Value |
 |---|---|
 | Platforms | macOS |
-| Name | `Storagelyzer: Disk Analyzer` (jeśli nazwa jest zajęta, spróbuj np. `Storagelyzer – Disk Usage`) |
+| Name | `Storagelyzer: Disk Analyzer` (if the name is taken, try e.g. `Storagelyzer – Disk Usage`) |
 | Primary Language | English (U.S.) |
 | Bundle ID | com.wojtek.storagelyzer |
 | SKU | `storagelyzer` |
 | User Access | Full Access |
 
-### 8. Build i wysyłka
+### 8. Build and upload
 
 ```bash
 npm run appstore -- build
 ```
 
-Buduje wersję uniwersalną (Apple Silicon + Intel), podpisuje ją z profilem i tworzy `dist-appstore/Storagelyzer-1.0.0-<build>.pkg`. Numer buildu (`CFBundleVersion`) to data i godzina, więc każdy build ma nowy numer, a wersja zostaje 1.0.0.
+Builds a universal app (Apple silicon + Intel), signs it with the profile and creates `dist-appstore/Storagelyzer-1.0.0-<build>.pkg`. The build number (`CFBundleVersion`) is the date and time, so every build gets a new one while the version stays 1.0.0.
 
-Wysyłka, do wyboru:
+Upload, either:
 
-- **Transporter** (darmowa aplikacja Apple z Mac App Store): zaloguj się, przeciągnij `.pkg`, „Deliver”;
-- albo `npm run appstore -- upload` z kluczem API (App Store Connect → Users and Access → Integrations → App Store Connect API → klucz z rolą Developer; plik `AuthKey_<ID>.p8` do `~/.appstoreconnect/private_keys/`, a `ASC_KEY_ID` i `ASC_ISSUER_ID` do `appstore.env`).
+- with **Transporter** (Apple's free app on the Mac App Store): sign in, drop the `.pkg`, "Deliver";
+- or with `npm run appstore -- upload` and an API key (App Store Connect → Users and Access → Integrations → App Store Connect API → a key with the Developer role; put `AuthKey_<ID>.p8` into `~/.appstoreconnect/private_keys/`, and `ASC_KEY_ID` and `ASC_ISSUER_ID` into `appstore.env`).
 
-Po 5–30 minutach build pojawi się w zakładce TestFlight. **Polecam najpierw TestFlight**: dodaj siebie jako testera wewnętrznego, zainstaluj aplikację przez TestFlight na Macu i przejdź listę z kroku 1 na prawdziwie podpisanej wersji.
+After 5–30 minutes the build appears under TestFlight. **Try TestFlight first**: add yourself as an internal tester, install the app through TestFlight on your Mac and go through the list from step 1 on the properly signed build.
 
-### 9. Strona w sklepie
+### 9. The store listing
 
-W App Store Connect → Storagelyzer → wersja 1.0 (dodaj też lokalizację **Polish**, przełącznik języka u góry po prawej):
+App Store Connect → Storagelyzer → version 1.0 (also add the **Polish** localization with the language menu in the top right):
 
-| Pole w App Store Connect | Plik |
+| App Store Connect field | File |
 |---|---|
-| Name | `metadata/<język>/name.txt` |
-| Subtitle | `metadata/<język>/subtitle.txt` |
-| Promotional Text | `metadata/<język>/promotional_text.txt` |
-| Description | `metadata/<język>/description.txt` |
-| Keywords | `metadata/<język>/keywords.txt` |
-| Support URL | `metadata/<język>/support_url.txt` |
-| Marketing URL | `metadata/<język>/marketing_url.txt` |
-| Privacy Policy URL (App Information / App Privacy) | `metadata/<język>/privacy_url.txt` |
-| Screenshots (Mac) | `screenshots/en-US/*.png`, `screenshots/pl/*.png` w kolejności nazw |
+| Name | `metadata/<locale>/name.txt` |
+| Subtitle | `metadata/<locale>/subtitle.txt` |
+| Promotional Text | `metadata/<locale>/promotional_text.txt` |
+| Description | `metadata/<locale>/description.txt` |
+| Keywords | `metadata/<locale>/keywords.txt` |
+| Support URL | `metadata/<locale>/support_url.txt` |
+| Marketing URL | `metadata/<locale>/marketing_url.txt` |
+| Privacy Policy URL (App Information / App Privacy) | `metadata/<locale>/privacy_url.txt` |
+| Screenshots (Mac) | `screenshots/en-US/*.png`, `screenshots/pl/*.png`, in file name order |
 | Copyright | `metadata/copyright.txt` |
-| Category | Primary: Utilities, Secondary: Developer Tools (opcjonalnie) |
+| Category | Primary: Utilities, Secondary: Developer Tools (optional) |
 
-Pozostałe sekcje:
+The other sections:
 
-- **App Privacy** → Get Started → „No, we do not collect data from this app” → Publish. Etykieta w sklepie: „Data Not Collected”.
-- **Age Rating**: wszędzie „None” / „No” (brak treści dla dorosłych, brak treści od użytkowników, brak czatu, brak nieograniczonego dostępu do sieci, brak reklam). Wynik: 4+.
-- **Pricing and Availability**: Price → **Free (0)**. Availability → wszystkie kraje. Wyjątkiem są Chiny kontynentalne, które wymagają numeru rejestracji ICP, więc najprościej je odznaczyć.
-- **App Information → Content Rights**: „No, it does not contain, show, or access third-party content”.
-- **Digital Services Act** (Business → Compliance): status przedsiębiorcy w UE. Przy hobbystycznej darmowej aplikacji zwykle wybiera się „not a trader”. Jako „trader” musiałbyś opublikować adres i telefon. To Twoja decyzja prawna; bez odpowiedzi aplikacja nie pojawi się w krajach UE.
-- **Encryption**: pytań nie będzie, bo załatwia to `ITSAppUsesNonExemptEncryption = false`.
-- **App Review Information**: imię, nazwisko, telefon, e-mail (widzi je tylko Apple), „Sign-in required” odznaczone, Notes z `metadata/review_information/notes.txt`.
-- **Version Release**: „Manually release this version”, żeby wydać 1.0 samemu po akceptacji.
+- **App Privacy** → Get Started → "No, we do not collect data from this app" → Publish. The store label reads "Data Not Collected".
+- **Age Rating**: "None" / "No" everywhere (no mature content, no user-generated content, no chat, no unrestricted web access, no ads). Result: 4+.
+- **Pricing and Availability**: Price → **Free (0)**. Availability → all countries, except China mainland, which requires an ICP filing number; it is simplest to leave it out.
+- **App Information → Content Rights**: "No, it does not contain, show, or access third-party content".
+- **Digital Services Act** (Business → Compliance): your EU trader status. For a free hobby app people usually choose "not a trader"; a trader has to publish an address and phone number. It is your legal call; without an answer the app is not shown in EU countries.
+- **Encryption**: no questions, `ITSAppUsesNonExemptEncryption = false` takes care of it.
+- **App Review Information**: first and last name, phone, e-mail (only Apple sees them), "Sign-in required" unticked, Notes from `metadata/review_information/notes.txt`.
+- **Version Release**: "Manually release this version", so you release 1.0 yourself after approval.
 
-### 10. Wysłanie do recenzji
+### 10. Submit for review
 
-W wersji 1.0 wybierz build z TestFlight → Add for Review → Submit. Recenzja trwa zwykle 1–2 dni. Najczęstsze pytania recenzentów przy takiej aplikacji, na które odpowiadają już notatki:
+In version 1.0 pick the build from TestFlight → Add for Review → Submit. Review usually takes 1–2 days. The questions reviewers most often ask about an app like this, already answered in the notes:
 
-- *Po co `network.client`?* WKWebView bez niego nie uruchamia procesów pomocniczych w sandboxie (sprawdzone: bez niego interfejs się nie ładuje). Aplikacja nie łączy się z siecią.
-- *Po co Full Disk Access?* Jest opcjonalny, a aplikacja działa bez niego i mówi, czego nie mogła odczytać.
-- *Czy usuwa dane innych aplikacji?* Tylko to, co wskaże użytkownik, zawsze do Kosza. Dane zainstalowanych aplikacji są tylko do wglądu.
+- *Why `network.client`?* Without it WKWebView cannot start its helper processes in the sandbox (tested: without it the interface does not load). The app makes no network connections.
+- *Why Full Disk Access?* It is optional; the app works without it and says what it could not read.
+- *Does it delete other apps' data?* Only what the user picks, always to the Trash. Data of installed apps is shown for reference only.
 
-## Kolejne wersje
+## Later versions
 
-1. Podnieś wersję w `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` i `package.json` (np. 1.0.1).
-2. `npm run appstore -- build`, potem upload.
-3. W App Store Connect: „+ Version”, tekst „What's New”, wybór buildu, Submit.
+1. Raise the version in `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `package.json` (e.g. 1.0.1).
+2. `npm run appstore -- build`, then upload.
+3. In App Store Connect: "+ Version", "What's New" text, pick the build, Submit.
 
-Aktualizacje idą tylko przez App Store (aplikacja nie ma własnego mechanizmu aktualizacji, zgodnie z wytycznymi).
+Updates come only through the App Store (the app has no updater of its own, as the guidelines require).
 
-## Polecenia w skrócie
+## Commands
 
-| Polecenie | Co robi |
+| Command | What it does |
 |---|---|
-| `npm run appstore -- local` | wersja z sandboxem do testów, bez konta |
-| `npm run appstore -- local --universal` | to samo dla Apple Silicon + Intel |
-| `npm run appstore -- check` | czego brakuje do wysyłki |
-| `npm run appstore -- build` | podpisana paczka `.pkg` do App Store |
-| `npm run appstore -- upload` | walidacja i wysyłka paczki |
-| `npm run media -- appstore` | nowe zrzuty ekranu (wymaga `npm run dev`) |
+| `npm run appstore -- local` | sandboxed test build, no account needed |
+| `npm run appstore -- local --universal` | the same for Apple silicon + Intel |
+| `npm run appstore -- check` | what is still missing for a submission |
+| `npm run appstore -- build` | signed `.pkg` for the App Store |
+| `npm run appstore -- upload` | validate and upload the package |
+| `npm run media -- appstore` | new screenshots (needs `npm run dev`) |
