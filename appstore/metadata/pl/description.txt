@@ -1,0 +1,34 @@
+Storagelyzer pokazuje, co zajmuje miejsce na dysku Twojego Maca, i pomaga je zwolnić bez ryzykownego kasowania.
+
+DYSK JAKO PIERŚCIENIE
+Każdy folder to wycinek pierścienia, tym większy, im więcej miejsca zajmuje. Najedź na folder, a linie wskażą największe elementy w środku, z nazwami i rozmiarami. Kliknij, by wejść głębiej; kliknij środek, by wrócić. Lista folderów obok wykresu zmienia się razem z nim i obsłużysz ją klawiaturą.
+
+SZYBKIE SKANOWANIE NA ŻYWO
+Skaner napisany w Ruście odczytuje całego Maca w kilka sekund, a wykres płynnie rośnie w trakcie. Rozmiary zgadzają się z tym, co podaje macOS: twarde dowiązania liczone są raz, firmlinki APFS nie są liczone podwójnie, a pliki trzymane tylko w iCloud nigdy nie są pobierane.
+
+CO KRYJE SIĘ W „DANYCH SYSTEMOWYCH”
+Asystent „Zwolnij miejsce” mierzy miejsca, które rosną po cichu:
+• pamięć podręczną aplikacji, także Chrome, Slacka, VS Code i innych aplikacji webowych
+• logi
+• dane kompilacji Xcode, pliki obsługi urządzeń i archiwa
+• pamięć podręczną narzędzi programisty (npm, Cargo, Gradle, Go i inne)
+• stare kopie zapasowe iPhone’a i iPada oraz uaktualnienia oprogramowania
+• instalatory zostawione w Pobranych rzeczach
+• największe aplikacje wraz z datą ostatniego otwarcia
+• pozostałości po odinstalowanych aplikacjach
+To nie jest sztywna lista: nazwy aplikacji i to, czy są jeszcze zainstalowane, podaje sam macOS, więc działa to z każdą aplikacją.
+
+BEZPIECZNIE OD POCZĄTKU
+• Wszystko najpierw trafia do Kosza, więc możesz to przywrócić.
+• Usunąć można tylko to, co znalazła analiza.
+• Dane zainstalowanych aplikacji są pokazywane tylko informacyjnie.
+• Domyślnie zaznaczone jest tylko to, co aplikacje odtworzą same; Twoje pliki nigdy.
+
+UCZCIWE ROZMIARY
+„Na dysku” kontra „Rozmiar”: gdy bardzo się różnią (obraz dysku Dockera, który deklaruje 1 TB, a zajmuje 20 GB, pliki trzymane tylko w iCloud), Storagelyzer pokaże, które pliki za to odpowiadają i jaką część zajętego miejsca udało się zobaczyć.
+
+STWORZONY DLA MACA
+Tryb jasny i ciemny, integracja z Finderem, obsługa klawiaturą, polski i angielski. Aplikacja waży około 10 MB.
+
+PRYWATNIE
+Storagelyzer nie zbiera żadnych danych i nie łączy się z internetem. macOS pyta Cię, zanim aplikacja odczyta dysk lub folder. Dla pełnego obrazu możesz też nadać jej Pełny dostęp do dysku w Ustawieniach systemowych.

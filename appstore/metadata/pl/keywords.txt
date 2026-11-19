@@ -1,0 +1,1 @@
+miejsce,pamięć,czyszczenie,porządki,cache,rozmiar folderu,wykres,xcode,dane systemowe,kosz

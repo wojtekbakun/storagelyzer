@@ -55,11 +55,15 @@ export interface Location {
   available: number | null;
   fsType: string | null;
   readOnly: boolean;
+  /** The app may read it — false only in the App Store build until the user allows it. */
+  granted: boolean;
 }
 
 export interface Locations {
   items: Location[];
   fullDiskAccess: boolean | null;
+  /** Mac App Store build (App Sandbox): disks and folders need the user's permission. */
+  sandboxed: boolean;
 }
 
 export interface Progress {

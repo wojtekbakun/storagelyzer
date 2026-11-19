@@ -1,0 +1,34 @@
+Storagelyzer shows what fills your Mac's disk and helps you free up space without risky deletes.
+
+YOUR DISK AS RINGS
+Every folder is a ring segment, sized by how much space it takes. Hover a folder and lines point to the biggest things inside it, with their names and sizes. Click to dive in, click the centre to go back. The folder list next to the chart stays in sync, and you can drive it with the keyboard.
+
+FAST, LIVE SCANS
+A scanner written in Rust reads a whole Mac in seconds, and the chart grows smoothly while it works. Sizes match what macOS reports: hard links count once, APFS firmlinks are not counted twice, and files kept only in iCloud are never downloaded.
+
+FIND WHAT HIDES IN "SYSTEM DATA"
+The Free Up Space assistant measures the places that grow silently:
+• app caches, including Chrome, Slack, VS Code and other web-based apps
+• logs
+• Xcode build data, device support files and archives
+• developer tool caches (npm, Cargo, Gradle, Go and more)
+• old iPhone and iPad backups and software updates
+• installers left in Downloads
+• your biggest apps, with when you last opened them
+• leftovers of apps you have uninstalled
+It is not a hard-coded list: app names and "is it still installed?" come from macOS itself, so it works for any app.
+
+SAFE BY DEFAULT
+• Everything goes to the Trash first, so you can put it back.
+• Only what the analysis found can be removed.
+• Data of installed apps is shown for reference only.
+• Items that apps recreate on their own are pre-selected; your own files never are.
+
+HONEST SIZES
+"On disk" vs "Size": when they differ wildly (a 1 TB Docker disk image that takes 20 GB, files kept only in iCloud), Storagelyzer shows exactly which files cause it, and how much of the used space it could see.
+
+MADE FOR THE MAC
+Light and dark mode, Finder integration, keyboard navigation, English and Polish. The app is about 10 MB.
+
+PRIVATE
+Storagelyzer collects no data and makes no network connections. macOS asks you before it can read a disk or folder. For a complete picture, you can also give it Full Disk Access in System Settings.

@@ -1,0 +1,5 @@
+"NSDesktopFolderUsageDescription" = "Storagelyzer mierzy, ile miejsca zajmują pliki na Biurku. Niczego nie wysyła ani nie zmienia.";
+"NSDocumentsFolderUsageDescription" = "Storagelyzer mierzy, ile miejsca zajmują Twoje Dokumenty. Niczego nie wysyła ani nie zmienia.";
+"NSDownloadsFolderUsageDescription" = "Storagelyzer mierzy, ile miejsca zajmują Pobrane rzeczy. Niczego nie wysyła ani nie zmienia.";
+"NSRemovableVolumesUsageDescription" = "Storagelyzer mierzy zajęte miejsce na dyskach wymiennych, które wybierzesz do skanowania.";
+"NSNetworkVolumesUsageDescription" = "Storagelyzer mierzy zajęte miejsce na woluminach sieciowych, które wybierzesz do skanowania.";

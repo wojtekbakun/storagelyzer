@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The App Store sandbox without an Apple Developer account: `scripts/appstore.sh local`
+  signs a test build ad hoc with these entitlements, so the App Store version can be
+  tried on this Mac before it is submitted. Same as AppStore.entitlements minus the
+  team/application identifiers (those need a provisioning profile).
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+	<!-- WebKit's helper processes (WKWebView draws the interface) do not start in
+	     the sandbox without it. The app itself makes no network connections. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>

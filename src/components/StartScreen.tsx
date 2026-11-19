@@ -1,6 +1,6 @@
 import type { Backend } from "../api";
 import { formatBytes } from "../format";
-import { currentLang, setLang, t } from "../i18n";
+import { t } from "../i18n";
 import type { Location, Locations } from "../types";
 import {
   DiskIcon,
@@ -37,8 +37,16 @@ function LocationIcon({ loc }: { loc: Location }) {
 
 export function StartScreen({ api, locations, isDev, onScan, onRefresh, onCleanup }: Props) {
   const pick = async () => {
-    const path = await api.pickFolder(t("chooseFolder"));
+    const path = await api.pickFolder(t("pickMessage"), t("pickPrompt"));
     if (path) onScan(path);
+  };
+
+  // Mac App Store build: macOS lets the app read only what the user allowed.
+  const root = locations?.items.find((l) => l.kind === "root");
+  const needsRoot = locations?.sandboxed && root && !root.granted ? root : null;
+  const allow = async (loc: Location) => {
+    await api.ensureAccess(loc.path, t("accessMessage", { name: loc.name }), t("accessAllow")).catch(() => null);
+    onRefresh();
   };
 
   return (
@@ -49,19 +57,6 @@ export function StartScreen({ api, locations, isDev, onScan, onRefresh, onCleanu
           Storagelyzer
         </div>
         <div className="tb-spacer" data-tauri-drag-region />
-        <div className="segmented segmented-small" role="radiogroup" aria-label="Language">
-          {(["pl", "en"] as const).map((l) => (
-            <button
-              key={l}
-              className={currentLang === l ? "is-on" : ""}
-              role="radio"
-              aria-checked={currentLang === l}
-              onClick={() => currentLang !== l && setLang(l)}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
       </header>
       <main className="start">
         <div className="start-inner">
@@ -72,6 +67,21 @@ export function StartScreen({ api, locations, isDev, onScan, onRefresh, onCleanu
               <p>{t("appSubtitle")}</p>
             </div>
           </div>
+
+          {needsRoot ? (
+            <div className="banner">
+              <DiskIcon size={18} className="banner-icon" />
+              <div className="banner-text">
+                <strong>{t("accessTitle")}</strong>
+                <span>{t("accessText", { name: needsRoot.name })}</span>
+              </div>
+              <div className="banner-actions">
+                <button className="button button-primary" onClick={() => void allow(needsRoot)}>
+                  {t("accessButton")}
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           {locations?.fullDiskAccess === false ? (
             <div className="banner">
@@ -107,6 +117,7 @@ export function StartScreen({ api, locations, isDev, onScan, onRefresh, onCleanu
                       {loc.kind === "home" ? t("homeFolder") : loc.name}
                       {loc.kind === "network" ? <span className="tag">{t("network")}</span> : null}
                       {loc.readOnly ? <span className="tag">{t("readOnly")}</span> : null}
+                      {!loc.granted ? <span className="tag">{t("needsAccess")}</span> : null}
                     </span>
                     <span className="location-path">{loc.path}</span>
                     {used !== null && loc.total ? (

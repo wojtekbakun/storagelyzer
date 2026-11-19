@@ -15,6 +15,17 @@ const pl = {
   fdaOpen: "Otwórz Ustawienia",
   fdaRecheck: "Sprawdź ponownie",
   fdaDevNote: "W trybie deweloperskim uprawnienie dotyczy aplikacji terminala, z której uruchomiono program.",
+  accessTitle: "Zezwól na odczyt dysku",
+  accessText:
+    "macOS pozwala aplikacjom z App Store czytać tylko te dyski i foldery, które wskażesz. Zezwól raz na „{name}” — Storagelyzer to zapamięta. Niczego nie wysyła ani nie zmienia bez Twojej zgody.",
+  accessButton: "Zezwól na dostęp…",
+  accessAllow: "Zezwól na dostęp",
+  accessMessage: "Aby zmierzyć „{name}”, Storagelyzer potrzebuje Twojej zgody. Kliknij „Zezwól na dostęp”.",
+  accessCleanupMessage:
+    "Aby znaleźć to, co można bezpiecznie usunąć, Storagelyzer musi odczytać dysk startowy. Kliknij „Zezwól na dostęp”.",
+  needsAccess: "wymaga zgody",
+  pickMessage: "Wybierz folder do zmierzenia.",
+  pickPrompt: "Wybierz",
   back: "Lokalizacje",
   rescan: "Skanuj ponownie",
   sizeOnDisk: "Na dysku",
@@ -221,6 +232,16 @@ const en: Dict = {
   fdaOpen: "Open Settings",
   fdaRecheck: "Check again",
   fdaDevNote: "In development mode the permission belongs to the terminal app that launched the program.",
+  accessTitle: "Allow access to your disk",
+  accessText:
+    "macOS lets App Store apps read only the disks and folders you choose. Allow “{name}” once and Storagelyzer will remember it. Nothing is uploaded or changed without your say-so.",
+  accessButton: "Allow Access…",
+  accessAllow: "Allow Access",
+  accessMessage: "To measure “{name}”, Storagelyzer needs your permission. Click “Allow Access”.",
+  accessCleanupMessage: "To find what can be safely removed, Storagelyzer needs to read your startup disk. Click “Allow Access”.",
+  needsAccess: "needs permission",
+  pickMessage: "Choose a folder to measure.",
+  pickPrompt: "Choose",
   back: "Locations",
   rescan: "Rescan",
   sizeOnDisk: "On disk",
@@ -409,6 +430,8 @@ const en: Dict = {
   "cat.snapshots.d": "macOS removes them when space runs low — you can do it now.",
 };
 
+/** Set by the website so that its embedded demo follows the page language;
+ *  `npm run media` uses it too. The app itself ignores it. */
 const LANG_KEY = "storagelyzer.lang";
 
 function storedLang(): string | null {
@@ -419,26 +442,16 @@ function storedLang(): string | null {
   }
 }
 
+const inApp = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 const systemLocale: string =
   (typeof navigator !== "undefined" && (navigator.languages?.[0] || navigator.language)) || "en";
-const override = storedLang();
+const override = inApp ? null : storedLang();
 
-/** UI language: the user's choice (start screen), otherwise the system language. */
+/** UI language: Polish when macOS is set to Polish, English otherwise. */
 export const locale: string =
   override === "pl" ? "pl-PL" : override === "en" ? (systemLocale.startsWith("en") ? systemLocale : "en-US") : systemLocale;
 const isPl = locale.toLowerCase().startsWith("pl");
 const dict: Dict = isPl ? pl : en;
-
-export const currentLang: "pl" | "en" = isPl ? "pl" : "en";
-
-export function setLang(lang: "pl" | "en") {
-  try {
-    localStorage.setItem(LANG_KEY, lang);
-  } catch {
-    /* storage unavailable */
-  }
-  window.location.reload();
-}
 
 export type TKey = keyof Dict;
 

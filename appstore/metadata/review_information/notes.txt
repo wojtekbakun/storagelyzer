@@ -1,0 +1,12 @@
+Storagelyzer is a disk usage analyzer. No account or sign-in is needed, and the app makes no network connections and collects no data.
+
+HOW TO TEST
+1. Launch the app. The start screen asks to "Allow access to your disk". Click "Allow Access…" and confirm with "Allow Access" in the open panel that shows Macintosh HD. (App Sandbox: the app reads only disks and folders the user picks; the choice is kept as a security-scoped bookmark.)
+2. Click "Macintosh HD". The scan takes a few seconds; the chart and the folder list fill in live. Hover chart segments, click to zoom in, click the centre to go back. Right-click a row for Open / Show in Finder / Copy path / Move to Trash.
+3. Click "Free up space" in the toolbar. It lists caches, logs, developer data, installers, apps by last use and leftovers of uninstalled apps. Selected items are moved to the Trash only after the user clicks "Move to Trash" (they can be restored from the Trash).
+4. Optional: System Settings → Privacy & Security → Full Disk Access → + → Storagelyzer, then reopen the app. This lets it measure places macOS protects (Mail, Messages, Safari data). The app works without it and says what it could not read.
+
+NOTES
+• com.apple.security.network.client is present only because WKWebView (which draws the interface) cannot start its helper processes in the sandbox without it. The app loads no remote content and has no networking code.
+• Required-reason APIs (file timestamps, disk space) are declared in PrivacyInfo.xcprivacy: modification dates and free space are shown to the user.
+• The Mac App Store version has no actions that run other programs or need administrator rights.

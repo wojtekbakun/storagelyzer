@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Mac App Store build. scripts/appstore.sh replaces __TEAM_ID__ with the Team ID
+  of the Apple Developer account (developer.apple.com → Membership details).
+  The same values must be in the provisioning profile (embedded.provisionprofile).
+-->
+<plist version="1.0">
+<dict>
+	<!-- Required for every Mac App Store app. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Disks and folders the user picks in an open panel (read, move to the Trash). -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<!-- Remember those choices between launches (security-scoped bookmarks). -->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+	<!-- WebKit's helper processes (WKWebView draws the interface) do not start in
+	     the sandbox without it. The app itself makes no network connections. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.application-identifier</key>
+	<string>__TEAM_ID__.com.wojtek.storagelyzer</string>
+	<key>com.apple.developer.team-identifier</key>
+	<string>__TEAM_ID__</string>
+</dict>
+</plist>

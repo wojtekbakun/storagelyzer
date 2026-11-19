@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storagelyzer privacy policy</title>
+<meta name="description" content="Storagelyzer collects no data. Everything it measures stays on your Mac.">
+<link rel="icon" type="image/png" href="media/icon.png">
+<style>
+:root {
+  --bg: #f4f6fb; --surface: #ffffff; --fg: #131a2e; --muted: #586079;
+  --line: rgba(19, 26, 46, 0.12); --accent: #2f5fe4;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1020; --surface: #141a2d; --fg: #e8ecf7; --muted: #9ba4bf;
+    --line: rgba(232, 236, 247, 0.12); --accent: #88a8ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1020; --surface: #141a2d; --fg: #e8ecf7; --muted: #9ba4bf;
+  --line: rgba(232, 236, 247, 0.12); --accent: #88a8ff; color-scheme: dark;
+}
+:root:not([data-lang="pl"]) [lang="pl"], :root[data-lang="pl"] [lang="en"] { display: none !important; }
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 1.0625rem/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-underline-offset: 0.18em; }
+.wrap { max-width: 46rem; margin-inline: auto; padding: 32px 16px 64px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 40px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-weight: 700; font-size: 1.125rem; }
+.brand img { width: 32px; height: 32px; }
+.switch { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.switch button { appearance: none; border: 0; border-radius: 7px; padding: 6px 11px; background: transparent; color: var(--muted); font: 600 0.8125rem/1 var(--font); cursor: pointer; }
+.switch button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+h1 { font-size: clamp(1.9rem, 5vw, 2.5rem); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 8px; }
+h2 { font-size: 1.2rem; margin: 36px 0 8px; }
+.meta { color: var(--muted); margin: 0 0 28px; }
+.summary { padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.summary p { margin: 0; }
+ul { padding-left: 1.2em; }
+li { margin: 6px 0; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; overflow-wrap: anywhere; }
+footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="./"><img src="media/icon.png" alt="">Storagelyzer</a>
+    <div class="switch" role="group" aria-label="Language">
+      <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-set-lang="pl" aria-pressed="false">PL</button>
+    </div>
+  </header>
+
+  <main lang="en">
+    <h1>Privacy policy</h1>
+    <p class="meta">Effective 19 November 2026</p>
+    <div class="summary"><p><strong>Storagelyzer collects no data.</strong> It has no accounts, no analytics, no ads and no tracking, and it does not send anything over the internet. Everything it measures stays on your Mac.</p></div>
+
+    <h2>What the app reads</h2>
+    <p>To draw the chart, Storagelyzer reads the names, sizes and dates of the files and folders on the disks and folders you choose to scan, and the free space of your disks. The "Free up space" assistant also looks at well-known places that fill up a Mac (caches, logs, developer tool data, iPhone backups, installers) and at which apps are installed and when they were last opened, which macOS itself records. This information is processed in memory on your Mac, shown to you and discarded when you quit the app. It is never uploaded, shared or sold.</p>
+
+    <h2>What the app stores</h2>
+    <ul>
+      <li>The interface language, if you pick one.</li>
+      <li>In the Mac App Store version: which disks and folders you allowed it to read (macOS "security-scoped bookmarks"), so it does not ask again on every launch.</li>
+    </ul>
+    <p>Both stay on your Mac, inside the app's own data. Deleting the app removes them; you can also delete the folder <code>~/Library/Containers/com.wojtek.storagelyzer</code>.</p>
+
+    <h2>What the app changes</h2>
+    <p>Nothing, unless you ask. When you choose to remove items, they are moved to the Trash, where you can restore them. Files are deleted permanently only when you choose "Empty Trash" and confirm it.</p>
+
+    <h2>Permissions</h2>
+    <p>macOS asks you before the app can read a disk or folder. You can also give it Full Disk Access in System Settings, so that it can measure places macOS protects (such as Mail or Messages data); this is optional, and you can turn it off at any time. The app does not ask for access to your contacts, photos, location, camera or microphone.</p>
+
+    <h2>Children</h2>
+    <p>The app collects no personal data from anyone, including children.</p>
+
+    <h2>This website</h2>
+    <p>This policy is about the app. The website at storagelyzer.wojciechbakun.pl counts visits with Cloudflare Web Analytics, which uses no cookies and does not follow you across sites: it records page views, the referring site, country, and browser and device type, in aggregate. The site is served by Cloudflare (and a copy by GitHub Pages), which process technical data such as IP addresses to deliver the pages, as described in their own privacy policies.</p>
+
+    <h2>Changes and contact</h2>
+    <p>If this policy changes, the new version will be published on this page with a new date. Questions: <a href="https://github.com/wojtekbakun/storagelyzer/issues">open an issue on GitHub</a>. Storagelyzer is developed by Wojciech Bakun.</p>
+  </main>
+
+  <main lang="pl">
+    <h1>Polityka prywatności</h1>
+    <p class="meta">Obowiązuje od 19 listopada 2026 r.</p>
+    <div class="summary"><p><strong>Storagelyzer nie zbiera żadnych danych.</strong> Nie ma kont, analityki, reklam ani śledzenia i niczego nie wysyła przez internet. Wszystko, co mierzy, zostaje na Twoim Macu.</p></div>
+
+    <h2>Co aplikacja odczytuje</h2>
+    <p>Aby narysować wykres, Storagelyzer odczytuje nazwy, rozmiary i daty plików i folderów na dyskach i w folderach, które wybierzesz do skanowania, oraz ilość wolnego miejsca na dyskach. Asystent „Zwolnij miejsce” sprawdza też znane miejsca, które zapełniają Maca (pamięć podręczną, logi, dane narzędzi programistycznych, kopie zapasowe iPhone’a, instalatory), a także to, jakie aplikacje są zainstalowane i kiedy były ostatnio otwierane (te informacje zapisuje sam macOS). Wszystko jest przetwarzane w pamięci na Twoim Macu, pokazywane Tobie i zapominane po zamknięciu aplikacji. Nic nie jest wysyłane, udostępniane ani sprzedawane.</p>
+
+    <h2>Co aplikacja zapisuje</h2>
+    <ul>
+      <li>Język interfejsu, jeśli go wybierzesz.</li>
+      <li>W wersji z Mac App Store: dyski i foldery, na których odczyt się zgodziłeś (tzw. zakładki z zakresem bezpieczeństwa macOS), żeby nie pytać o to przy każdym uruchomieniu.</li>
+    </ul>
+    <p>Jedno i drugie zostaje na Twoim Macu, w danych samej aplikacji. Usunięcie aplikacji usuwa też te dane; możesz również usunąć folder <code>~/Library/Containers/com.wojtek.storagelyzer</code>.</p>
+
+    <h2>Co aplikacja zmienia</h2>
+    <p>Nic, dopóki o to nie poprosisz. Elementy, które zdecydujesz się usunąć, trafiają do Kosza, z którego możesz je przywrócić. Pliki znikają na stałe dopiero wtedy, gdy wybierzesz „Opróżnij Kosz” i to potwierdzisz.</p>
+
+    <h2>Uprawnienia</h2>
+    <p>macOS pyta Cię, zanim aplikacja odczyta dysk lub folder. Możesz też nadać jej Pełny dostęp do dysku w Ustawieniach systemowych, żeby mogła zmierzyć miejsca chronione przez macOS (np. dane Poczty czy Wiadomości). Jest to opcjonalne i możesz to w każdej chwili wyłączyć. Aplikacja nie prosi o dostęp do kontaktów, zdjęć, lokalizacji, kamery ani mikrofonu.</p>
+
+    <h2>Dzieci</h2>
+    <p>Aplikacja nie zbiera danych osobowych od nikogo, w tym od dzieci.</p>
+
+    <h2>Ta strona internetowa</h2>
+    <p>Ta polityka dotyczy aplikacji. Strona storagelyzer.wojciechbakun.pl liczy odwiedziny za pomocą Cloudflare Web Analytics, które nie używa plików cookie i nie śledzi Cię między witrynami: zapisuje zbiorczo wyświetlenia stron, stronę odsyłającą, kraj oraz typ przeglądarki i urządzenia. Stronę serwuje Cloudflare (a jej kopię GitHub Pages), które przetwarzają dane techniczne, np. adresy IP, żeby dostarczyć strony, zgodnie z własnymi politykami prywatności.</p>
+
+    <h2>Zmiany i kontakt</h2>
+    <p>Jeśli ta polityka się zmieni, nowa wersja pojawi się na tej stronie z nową datą. Pytania: <a href="https://github.com/wojtekbakun/storagelyzer/issues">zgłoś je na GitHubie</a>. Twórcą Storagelyzera jest Wojciech Bakun.</p>
+  </main>
+
+  <footer>
+    <a href="./"><span lang="en">Storagelyzer home</span><span lang="pl">Strona Storagelyzera</span></a>
+    <a href="support.html"><span lang="en">Support</span><span lang="pl">Pomoc</span></a>
+  </footer>
+</div>
+<script>
+(() => {
+  const root = document.documentElement;
+  const KEY = "storagelyzer-site-lang";
+  const set = (lang) => {
+    root.dataset.lang = lang;
+    root.lang = lang;
+    document.querySelectorAll("[data-set-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setLang === lang)));
+  };
+  // English unless Polish was asked for: ?lang=pl (the Polish App Store listing) or the switch.
+  let lang = new URLSearchParams(location.search).get("lang");
+  if (lang !== "pl" && lang !== "en") {
+    try { lang = localStorage.getItem(KEY); } catch { lang = null; }
+  }
+  set(lang === "pl" ? "pl" : "en");
+  document.querySelectorAll("[data-set-lang]").forEach((b) =>
+    b.addEventListener("click", () => {
+      set(b.dataset.setLang);
+      try { localStorage.setItem(KEY, b.dataset.setLang); } catch {}
+    }),
+  );
+})();
+</script>
+</body>
+</html>

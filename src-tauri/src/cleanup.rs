@@ -21,8 +21,14 @@
 //!   only (`locked`);
 //! - protected places are skipped without Full Disk Access instead of
 //!   triggering a cascade of permission prompts.
+//!
+//! In the App Sandbox (Mac App Store build) the app may not run other
+//! programs with the user's rights or ask for an administrator password, so
+//! the Homebrew, simulator and Time Machine actions are left out there; the
+//! simulators are still measured and can be shown in Finder.
 
 use crate::apps::{self, AppNames};
+use crate::sandbox::is_sandboxed;
 use crate::scan::Scanner;
 use crate::tree::{Kind, NONE, NodeId, ROOT, SizeMode, Tree, flag};
 use parking_lot::RwLock;
@@ -615,7 +621,7 @@ pub fn analyze(
     let mut names = AppNames::default();
 
     // Slow, independent parts run alongside the rest.
-    let brew = brew_path().map(|b| {
+    let brew = brew_path().filter(|_| !is_sandboxed()).map(|b| {
         std::thread::spawn(move || {
             let out = brew_command(&b).args(["cleanup", "--prune=all", "-n"]).output().ok()?;
             parse_brew_size(&String::from_utf8_lossy(&out.stdout))
@@ -769,7 +775,8 @@ pub fn analyze(
 
     let devices = lib.join("Developer/CoreSimulator/Devices");
     if devices.is_dir() {
-        let mut cat = Category::new("simulators", "review", "simulators");
+        let action = if is_sandboxed() { "info" } else { "simulators" };
+        let mut cat = Category::new("simulators", "review", action);
         if let Some(tree) = scan(&devices) {
             let t = tree.read();
             cat.size = t.node(ROOT).size;
@@ -856,7 +863,7 @@ pub fn analyze(
     }
 
     // --- System
-    let snapshots = local_snapshots();
+    let snapshots = if is_sandboxed() { Vec::new() } else { local_snapshots() };
     if !snapshots.is_empty() {
         let mut cat = Category::new("snapshots", "system", "snapshots");
         cat.count = snapshots.len() as u32;
@@ -930,6 +937,7 @@ pub fn empty_trash(home: &Path) -> Result<u32, String> {
             }
             Ok(failed)
         }
+        Err(_) if is_sandboxed() => Err("needs-full-disk-access".into()),
         Err(_) => {
             let status = Command::new("/usr/bin/osascript")
                 .args(["-e", "tell application \"Finder\" to empty trash"])
@@ -946,6 +954,9 @@ pub fn empty_trash(home: &Path) -> Result<u32, String> {
 
 /// Runs one of the fixed clean-up commands.
 pub fn run_action(action: &str) -> Result<String, String> {
+    if is_sandboxed() {
+        return Err(format!("{action} is not available in the App Store version"));
+    }
     let output = match action {
         "brewCleanup" => {
             let brew = brew_path().ok_or("Homebrew not found")?;

@@ -98,7 +98,18 @@ pub fn root_volume_name() -> String {
             }
         }
     }
-    "Macintosh HD".to_string()
+    // The sandbox may hide /Volumes; the volume's own name is still readable.
+    volume_name(Path::new("/")).unwrap_or_else(|| "Macintosh HD".to_string())
+}
+
+/// Localized volume name (`NSURLVolumeLocalizedNameKey`).
+fn volume_name(path: &Path) -> Option<String> {
+    use objc2_foundation::{NSString, NSURL, NSURLVolumeLocalizedNameKey};
+    let url = NSURL::fileURLWithPath(&NSString::from_str(path.to_str()?));
+    let mut value = None;
+    unsafe { url.getResourceValue_forKey_error(&mut value, NSURLVolumeLocalizedNameKey) }.ok()?;
+    let name = value?.downcast::<NSString>().ok()?.to_string();
+    (!name.is_empty()).then_some(name)
 }
 
 /// Human name for a scan root: volume name for mount points, folder name otherwise.
@@ -122,10 +133,28 @@ pub struct Location {
     pub available: Option<u64>,
     pub fs_type: Option<String>,
     pub read_only: bool,
+    /// The app may read it (always, except in the App Sandbox before the
+    /// user has allowed access to it).
+    pub granted: bool,
 }
 
+/// The user's real home folder. Not `$HOME`: inside the App Sandbox that
+/// points at the app's container (`~/Library/Containers/<id>/Data`).
 pub fn home_dir() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from).filter(|p| p.is_dir())
+    let from_passwd = || {
+        let mut pwd: libc::passwd = unsafe { std::mem::zeroed() };
+        let mut buf = vec![0 as libc::c_char; 4096];
+        let mut out: *mut libc::passwd = std::ptr::null_mut();
+        let rc = unsafe { libc::getpwuid_r(libc::getuid(), &mut pwd, buf.as_mut_ptr(), buf.len(), &mut out) };
+        if rc != 0 || out.is_null() || pwd.pw_dir.is_null() {
+            return None;
+        }
+        let dir = unsafe { CStr::from_ptr(pwd.pw_dir) };
+        Some(PathBuf::from(OsStr::from_bytes(dir.to_bytes())))
+    };
+    from_passwd()
+        .or_else(|| std::env::var_os("HOME").map(PathBuf::from))
+        .filter(|p| !p.as_os_str().is_empty())
 }
 
 pub fn locations() -> Vec<Location> {
@@ -142,6 +171,7 @@ pub fn locations() -> Vec<Location> {
             available: None,
             fs_type: None,
             read_only: false,
+            granted: crate::sandbox::is_granted(&home),
         });
     }
 
@@ -169,6 +199,7 @@ pub fn locations() -> Vec<Location> {
                 available: Some(m.available),
                 fs_type: Some(m.fs_type.clone()),
                 read_only: m.flags & MNT_RDONLY != 0 && !is_root,
+                granted: crate::sandbox::is_granted(&m.mount_on),
             }
         })
         .collect();

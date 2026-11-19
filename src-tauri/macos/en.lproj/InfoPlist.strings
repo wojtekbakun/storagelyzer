@@ -1,0 +1,5 @@
+"NSDesktopFolderUsageDescription" = "Storagelyzer measures how much space the files on your Desktop take up. Nothing is uploaded or changed.";
+"NSDocumentsFolderUsageDescription" = "Storagelyzer measures how much space your Documents take up. Nothing is uploaded or changed.";
+"NSDownloadsFolderUsageDescription" = "Storagelyzer measures how much space your Downloads take up. Nothing is uploaded or changed.";
+"NSRemovableVolumesUsageDescription" = "Storagelyzer measures how much space is used on removable drives you choose to scan.";
+"NSNetworkVolumesUsageDescription" = "Storagelyzer measures how much space is used on network volumes you choose to scan.";

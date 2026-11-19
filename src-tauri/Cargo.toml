@@ -1,6 +1,6 @@
 [package]
 name = "storagelyzer"
-version = "0.1.0"
+version = "1.0.0"
 description = "Disk usage analyzer for macOS"
 authors = ["Wojtek"]
 license = "MIT"
@@ -27,6 +27,27 @@ parking_lot = "0.12.5"
 libc = "0.2.191"
 trash = "5.2.9"
 tauri-plugin-dialog = "2.8.4"
+# AppKit: open panel + security-scoped bookmarks (App Sandbox), Finder, clipboard.
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = [
+  "std",
+  "NSArray",
+  "NSData",
+  "NSError",
+  "NSString",
+  "NSURL",
+] }
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+  "std",
+  "NSApplication",
+  "NSOpenPanel",
+  "NSPanel",
+  "NSPasteboard",
+  "NSResponder",
+  "NSSavePanel",
+  "NSWindow",
+  "NSWorkspace",
+] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

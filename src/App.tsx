@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { backend, isTauri, type Backend } from "./api";
 import { CleanupView } from "./components/CleanupView";
 import { ScanView } from "./components/ScanView";
 import { StartScreen } from "./components/StartScreen";
+import { t } from "./i18n";
 import type { Locations } from "./types";
 
 export default function App() {
@@ -31,9 +32,26 @@ export default function App() {
     return () => window.removeEventListener("focus", onFocus);
   }, [scan, refreshLocations]);
 
-  const startScan = useCallback((path: string) => setScan({ path, nonce: Date.now() }), []);
+  // Read through a ref so that `startScan` stays stable (the launch effect below runs once).
+  const locationsRef = useRef(locations);
+  locationsRef.current = locations;
 
-  useEffect(() => (api ? api.onFolderDrop(startScan) : undefined), [api, startScan]);
+  // In the Mac App Store build a disk or folder must be allowed once before it can be read.
+  const startScan = useCallback(
+    async (path: string) => {
+      if (!api) return;
+      const loc = locationsRef.current?.items.find((l) => l.path === path);
+      const name = loc ? (loc.kind === "home" ? t("homeFolder") : loc.name) : (path.split("/").filter(Boolean).pop() ?? path);
+      const target = await api.ensureAccess(path, t("accessMessage", { name }), t("accessAllow")).catch((e) => {
+        api.log("error", `access to ${path}: ${String(e)}`);
+        return path;
+      });
+      if (target) setScan({ path: target, nonce: Date.now() });
+    },
+    [api],
+  );
+
+  useEffect(() => (api ? api.onFolderDrop((p) => void startScan(p)) : undefined), [api, startScan]);
 
   // `storagelyzer ~/Downloads` opens that folder right away; UI errors go to the log.
   useEffect(() => {
@@ -42,7 +60,8 @@ export default function App() {
     const onRejection = (e: PromiseRejectionEvent) => api.log("error", `unhandled rejection: ${String(e.reason)}`);
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onRejection);
-    void api.initialPath().then((p) => p && startScan(p));
+    api.log("info", `ui ready (${navigator.language})`);
+    void api.initialPath().then((p) => p && void startScan(p));
     void api.launchFlags().then((flags) => flags.includes("--cleanup") && setCleanup(true));
     return () => {
       window.removeEventListener("error", onError);
@@ -61,6 +80,7 @@ export default function App() {
         api={api}
         path={scan.path}
         home={home}
+        sandboxed={locations?.sandboxed ?? false}
         onBack={() => {
           void api.cancelScan();
           setScan(null);
@@ -76,7 +96,7 @@ export default function App() {
         api={api}
         locations={locations}
         isDev={import.meta.env.DEV || !isTauri}
-        onScan={startScan}
+        onScan={(p) => void startScan(p)}
         onRefresh={refreshLocations}
         onCleanup={() => setCleanup(true)}
       />
