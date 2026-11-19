@@ -65,7 +65,7 @@ App Store Connect needs a privacy policy URL and a support URL. The store texts 
 
 (the Polish listing adds `?lang=pl`, see `metadata/pl/*_url.txt`). Without it the pages are in English, with an EN/PL switch in the top right corner.
 
-The site on that subdomain is a Cloudflare Worker serving the static files from `docs/`. It is deployed with `wdrozenia/aplikacje.sh storagelyzer`, which takes `docs/` from the commit currently checked out in the repository (so merge this branch into `main` and check it out first) and adds Cloudflare Web Analytics. The same pages reach GitHub Pages (wojtekbakun.github.io/storagelyzer) once merged into `main`. The support page's contact link goes to GitHub Issues; if you prefer an e-mail address, add it to `docs/support.html`.
+The site on that subdomain is a Cloudflare Worker serving the static files from `docs/`. It is deployed with `wdrozenia/aplikacje.sh storagelyzer`, which takes `docs/` from the commit currently checked out in the repository (so merge this branch into `main` and check it out first) and adds Cloudflare Web Analytics. The same pages reach GitHub Pages (wojtekbakun.github.io/storagelyzer) once merged into `main`. The support page and the privacy policy give wojciechbakundev@gmail.com and GitHub Issues as contacts.
 
 ## Once the account is active
 

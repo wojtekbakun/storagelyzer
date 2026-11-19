@@ -65,7 +65,7 @@ App Store Connect wymaga adresu polityki prywatności i strony wsparcia. Teksty 
 
 (polska wersja sklepu z dopiskiem `?lang=pl`, zob. `metadata/pl/*_url.txt`). Bez dopisku strony są po angielsku, a przełącznik EN/PL jest w prawym górnym rogu.
 
-Strona na tej subdomenie to Worker na Cloudflare ze statycznymi plikami z `docs/`. Wdraża ją skrypt `wdrozenia/aplikacje.sh storagelyzer`, który bierze `docs/` z commita aktualnie wybranego w repozytorium (więc najpierw scal tę gałąź do `main` i ją wybierz) i dokleja Cloudflare Web Analytics. Ta sama zawartość trafia też na GitHub Pages (wojtekbakun.github.io/storagelyzer) po scaleniu do `main`. Kontakt na stronie pomocy prowadzi do GitHub Issues; jeśli wolisz e-mail, dopisz go w `docs/support.html`.
+Strona na tej subdomenie to Worker na Cloudflare ze statycznymi plikami z `docs/`. Wdraża ją skrypt `wdrozenia/aplikacje.sh storagelyzer`, który bierze `docs/` z commita aktualnie wybranego w repozytorium (więc najpierw scal tę gałąź do `main` i ją wybierz) i dokleja Cloudflare Web Analytics. Ta sama zawartość trafia też na GitHub Pages (wojtekbakun.github.io/storagelyzer) po scaleniu do `main`. Na stronie pomocy i w polityce prywatności jako kontakt podane są wojciechbakundev@gmail.com i GitHub Issues.
 
 ## Po wykupieniu konta
 
